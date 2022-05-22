@@ -8,15 +8,11 @@ class mad_dashboard{
 
   function __construct(){}
 
-  public static function enable($gradeValue, $previousCourseId, $courseId)
+  public static function enable()
   {
-    global $DB, $USER;
-    // If the user is going to enable prediction, it will set the grade value and update prediction settings
+    global $DB, $USER, $COURSE;
     $database_response = false;
-    $row_check = $DB->get_record("mdl_mad2api_dashboard_settings", ['user_id' => $USER->id, 'course_id' => $courseId]);
-    // It checks if there is any row with user_id, equals to the current-user id
-    // otherwise will create a new row, since when the MAD prediction settings table
-    // is created, the user ID comes without a value
+    $row_check = $DB->get_record("mad2api_dashboard_settings", ['user_id' => $USER->id, 'course_id' => $COURSE->id]);
     if (!$row_check) {
       $record = (object) array('user_id' => $USER->id,
                                'created_at' => date(),
@@ -35,6 +31,37 @@ class mad_dashboard{
       $database_response = $DB->execute($update_grade_value);
     }
     return $database_response;
+  }
+
+  public static function api_enable_call(){
+    global $COURSE, $USER, $DB;
+    var_dump( $DB->get_record("mdl_mad2api_dashboard_settings", ['user_id' => $USER->id, 'course_id' => $COURSE->id]));
+    return;
+    $campus = get_config('mad2api', 'campus');
+    $organization = get_config('mad2api', 'organization');
+    $data = array('class_code' => $COURSE->fullname,
+                  'campus' => $campus,
+                  'organization' => $organization,
+                  'professor' => array(
+                    "name" => "$USER->firstname $USER->lastname",
+                    "email" => $USER->email,
+                    "code_id" => "tststadadststs",
+                  ),
+            );
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL,"http://localhost:8000/api/plugin/enable");
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));  //Post Fields
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    $headers = [
+        'accept: application/json',
+        'Content-Type: application/json',
+    ];
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    $server_output = curl_exec($ch);
+    curl_close($ch);
+
+    echo $server_output;
   }
 
   public static function disable($courseId)
