@@ -28,12 +28,12 @@ $settings->add(new admin_setting_heading('sampleheader',
                                          get_string('headerconfig', 'block_mad2api'),
                                          get_string('descconfig', 'block_mad2api')));
 
-$settings->add(new admin_setting_configcheckbox('mad2api/foo',
-                                                get_string('labelfoo', 'block_mad2api'),
-                                                get_string('descfoo', 'block_mad2api'),
-                                                '0'));
+$settings->add(new admin_setting_configtext('mad2api/organization',
+                                               'Nome da organização',
+                                               '',
+                                               'UFSC'));
 
-$settings->add(new admin_setting_configtext('mad2api/bar',
+$settings->add(new admin_setting_configtext('mad2api/campus',
                                                 'Nome do campus',
                                                 '',
-                                                'UFSC'));
+                                                'ARU'));
