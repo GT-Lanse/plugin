@@ -37,9 +37,23 @@ class block_mad2api extends block_base {
         }
         $this->content = new stdClass();
         $this->content->text =
-          '<div class="plugin-link-container">
-            <a id="prediction-settings" class="plugin-link" href="#">Habilitar Dashboard</a>
-          </div>';
+          '
+
+          <div class="plugin-link-container">
+            <button id="prediction-settings" class="plugin-link" href="#">Habilitar Dashboard</a>
+          </div>
+
+
+          <script>
+                const btn = document.getElementById("prediction-settings")
+                console.log(btn)
+                btn.addEventListener("click", () => {
+                    fetch("http://localhost:8000/blocks/mad2api/test.php").then(() => {
+                        alert("Entre: http://localhost:3000/?courseId=2")
+                     })
+                })
+          </Script>
+';
 
         return $this->content;
     }
