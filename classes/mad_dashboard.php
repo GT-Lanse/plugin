@@ -27,7 +27,6 @@ class mad_dashboard{
                                'token' => $tokenHex,
                              );
       $database_response = $DB->insert_record('mad2api_dashboard_settings', $record, false);
-      var_dump($database_response);
       self::upload_logs($courseId);
     } else {
       $update_grade_value = "
@@ -37,7 +36,6 @@ class mad_dashboard{
       ";
       $database_response = $DB->execute($update_grade_value);
     }
-    echo "enable";
     return $database_response;
   }
 
@@ -67,7 +65,6 @@ class mad_dashboard{
     curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
     $server_output = curl_exec($ch);
     curl_close($ch);
-    echo "api_enable_call";
     return json_decode($server_output);
   }
 
@@ -111,7 +108,7 @@ class mad_dashboard{
     $organization = get_config('mad2api', 'organization');
     $course_settings = $DB->get_record("mad2api_dashboard_settings", ['user_id' => $USER->id, 'course_id' => $courseId]);
 
-    $s3 = new \S3("AKIARLANPF2DURY6V6P7", "eSFF5ojTveXsvMZTaIQT1pP3OoEEFfIi6PXYELvf", false);
+    $s3 = new \S3("KEY", "TOKEN", false);
     // echo "S3::listBuckets(): ".print_r($s3->listBuckets(), 1)."\n";
     // return;
     $logs_query = '
@@ -148,7 +145,6 @@ class mad_dashboard{
             fclose($fp);
         }
      }
-    str_putcsv($logs);
     $s3->putObject(file_get_contents('./temp.csv'), 'futurogfp-documents', "unprocessed/$organization/$campus/$course_settings->token/$courseId.csv", \S3::ACL_PRIVATE, array(), array('Content-Type' => 'text/csv'));
   }
 
