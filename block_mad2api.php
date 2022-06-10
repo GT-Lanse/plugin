@@ -46,13 +46,12 @@ class block_mad2api extends block_base {
 
           <script>
                 const btn = document.getElementById("prediction-settings")
-                console.log(btn)
                 btn.addEventListener("click", () => {
                     fetch("http://localhost:8000/blocks/mad2api/test.php").then(() => {
-                        alert("Entre: http://localhost:3000/?courseId=2")
+                        alert("Entre: http://localhost:3000/?courseId=3")
                      })
                 })
-          </Script>
+          </script>
 ';
 
         return $this->content;
