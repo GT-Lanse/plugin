@@ -23,23 +23,47 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-class block_mad2api extends block_base {
+require_once('classes/mad_dashboard.php');
 
+class block_mad2api extends block_base {
     function init() {
         $this->title = get_string('pluginname', 'block_mad2api');
     }
 
     function get_content() {
-        global $CFG, $OUTPUT;
+        global $CFG, $OUTPUT, $PAGE, $COURSE, $USER, $DB;
+
+        $context = context_course::instance($COURSE->id);
+
+        if (!\block_mad2api\mad_dashboard::is_current_user_course_teacher($context->id)) {
+            return null;
+        }
 
         if ($this->content !== null) {
             return $this->content;
         }
+
         $this->content = new stdClass();
-        $this->content->text =
-          '<div class="plugin-link-container">
-            <a id="prediction-settings" class="plugin-link" href="#">Habilitar Dashboard</a>
-          </div>';
+        $enabled = $DB->get_record(
+            "mad2api_dashboard_settings",
+            array( 'user_id' => $USER->id, 'course_id' => $COURSE->id, 'is_enabled' => 1)
+        );
+
+        $PAGE->requires->js_call_amd('block_mad2api/enable_button_api_call', 'init');
+
+        if ($enabled) {
+            $this->content->text =
+                '<div class="plugin-link-container">
+                    <a id="enable-settings" class="plugin-link disabled" href="">Habilitar Dashboard</a>
+                    <a id="disable-settings" class="plugin-link" href="">Desabilitar Dashboard</a>
+                </div>';
+        } else {
+            $this->content->text =
+                '<div class="plugin-link-container">
+                    <a id="enable-settings" class="plugin-link" href="">Habilitar Dashboard</a>
+                    <a id="disable-settings" class="plugin-link disabled" href="">Desabilitar Dashboard</a>
+                </div>';
+        }
 
         return $this->content;
     }
