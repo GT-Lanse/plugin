@@ -1,11 +1,11 @@
 define(['jquery', 'core/ajax', 'core/notification'], function($, ajax, notification) {
   return {
-    init: () => {
+    init: courseId => {
       $('#enable-settings').click((event) => {
         event.preventDefault();
 
         const args = {};
-        args.courseId = 2;
+        args.courseId = courseId;
 
         const request = {
           methodname: 'block_mad2api_enable_course',
@@ -28,7 +28,7 @@ define(['jquery', 'core/ajax', 'core/notification'], function($, ajax, notificat
         event.preventDefault();
 
         const args = {};
-        args.courseId = 2;
+        args.courseId = courseId;
 
         const request = {
           methodname: 'block_mad2api_disable_course',
