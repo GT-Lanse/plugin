@@ -49,7 +49,7 @@ class block_mad2api extends block_base {
             array( 'user_id' => $USER->id, 'course_id' => $COURSE->id, 'is_enabled' => 1)
         );
 
-        $PAGE->requires->js_call_amd('block_mad2api/enable_button_api_call', 'init');
+        $PAGE->requires->js_call_amd('block_mad2api/enable_button_api_call', 'init', array($COURSE->id));
 
         if ($enabled) {
             $this->content->text =
