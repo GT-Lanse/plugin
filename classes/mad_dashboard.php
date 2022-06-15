@@ -211,7 +211,8 @@ class mad_dashboard extends external_api {
 
     $course_settings = $DB->get_record("mad2api_dashboard_settings", ['user_id' => $USER->id, 'course_id' => $courseId]);
 
-    $s3 = new \S3($aws_secret_key, "eSFF5ojTveXsvMZTaIQT1pP3OoEEFfIi6PXYELvf", false);
+    $s3 = new \S3($access_key, $aws_secret_key, false);
+
     // echo "S3::listBuckets(): ".print_r($s3->listBuckets(), 1)."\n";
     // return;
     $logs_query = '
