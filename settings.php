@@ -33,11 +33,16 @@ $settings->add(new admin_setting_configtext('mad2api/organization',
                                                '',
                                                'UFSC'));
 
-$settings->add(new admin_setting_configtext('mad2api/access_key',
-                                              'Access Key',
+$settings->add(new admin_setting_configtext('mad2api/api_key',
+                                              'Chave API KEY Plugin',
                                               '',
                                               ''));
 
+$settings->add(new admin_setting_configtext('mad2api/access_key',
+                                              'AWS Access Key',
+                                              '',
+                                              ''));
+                                              
 $settings->add(new admin_setting_configtext('mad2api/aws_secret_key',
                                               'AWS Secret Key',
                                               '',
