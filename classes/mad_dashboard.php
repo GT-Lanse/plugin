@@ -257,7 +257,6 @@ class mad_dashboard extends external_api {
       array(),
       array(
         'Content-Type' => 'text/csv',
-        "API-KEY: {$access_key}"
       )
     );
   }
