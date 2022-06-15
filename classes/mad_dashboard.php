@@ -152,6 +152,9 @@ class mad_dashboard extends external_api {
     global $COURSE, $USER, $DB;
 
     $access_key = get_config('mad2api', 'access_key');
+    $aws_secret_key = get_config('mad2api', 'aws_secret_key');
+    $api_key = get_config('mad2api', 'api_key');
+
     $organization = get_config('mad2api', 'organization');
     $data = array(
       'class_code' => $courseId,
