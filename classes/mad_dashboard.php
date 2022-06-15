@@ -170,7 +170,8 @@ class mad_dashboard extends external_api {
     $headers = [
       'accept: application/json',
       'Content-Type: application/json',
-      "API-KEY: {$access_key}"
+      "API-KEY: {$api_key}"
+
     ];
     curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
     $server_output = curl_exec($ch);
