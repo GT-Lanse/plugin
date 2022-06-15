@@ -261,7 +261,8 @@ class mad_dashboard extends external_api {
       \S3::ACL_PRIVATE,
       array(),
       array(
-        'Content-Type' => 'text/csv',
+        'Content-Type' => 'text/csv'
+
       )
     );
   }
