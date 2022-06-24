@@ -27,7 +27,7 @@ class mad_dashboard extends external_api {
       new external_single_structure(
         array(
           'enabled' => new external_value(PARAM_BOOL, VALUE_REQUIRED),
-          'url' => new external_value(PARAM_STRING, VALUE_REQUIRED)
+          'url' => new external_value(PARAM_TEXT, VALUE_REQUIRED)
         )
       )
     );
@@ -50,17 +50,20 @@ class mad_dashboard extends external_api {
 
     if (isset($dashboard_setting) && $dashboard_setting->is_enabled == 1) {
       $response = self::api_dashboad_auth_url($params['courseId']);
+
       if (!property_exists($response, 'url')) {
-        #TODO should return and string to pop up and error
+        #TODO should return a string to pop up and error
         return;
       }
+
       return array(['enabled' => true, 'url' => $response["url"]]);
     }
 
     $database_response = false;
     $response = self::api_enable_call($params['courseId']);
-    if (!property_exists($response, 'plugin-info')) {
-      #TODO should return and string to pop up and error
+
+    if (!property_exists($response, 'url')) {
+      #TODO should return a string to pop up and error
       return;
     }
 
@@ -83,7 +86,7 @@ class mad_dashboard extends external_api {
 
     self::upload_logs($params['courseId']);
 
-    return array(['enabled' => $database_response, 'url' => $response["plugin-info"]]);
+    return array(['enabled' => $database_response, 'url' => $response["url"]]);
   }
 
   public static function disable_parameters() {

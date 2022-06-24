@@ -20,6 +20,9 @@ define(['jquery', 'core/ajax', 'core/notification'], function($, ajax, notificat
           if (body.enabled) {
             $('#disable-settings').removeClass('disabled');
             $('#enable-settings').addClass('disabled');
+
+            $("#access-dashboard").attr("href", body.url);
+            $('#access-dashboard').removeClass('disabled');
           }
         });
       });
@@ -43,6 +46,7 @@ define(['jquery', 'core/ajax', 'core/notification'], function($, ajax, notificat
           if (body.disabled) {
             $('#enable-settings').removeClass('disabled');
             $('#disable-settings').addClass('disabled');
+            $('#access-dashboard').addClass('disabled');
           }
         });
       });

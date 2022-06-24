@@ -48,18 +48,26 @@ class block_mad2api extends block_base {
             "mad2api_dashboard_settings",
             array( 'user_id' => $USER->id, 'course_id' => $COURSE->id, 'is_enabled' => 1)
         );
+        $course_info = \block_mad2api\mad_dashboard::enable($COURSE->id);
+        $url = $course_info[0]['url'];
 
         $PAGE->requires->js_call_amd('block_mad2api/enable_button_api_call', 'init', array($COURSE->id));
 
         if ($enabled) {
             $this->content->text =
                 '<div class="plugin-link-container">
+                    <div>
+                        <a id="access-dashboard" class="access-dashboard-button" href="'. $url .'" target="_blank">Acessar Dashboard</a>
+                    </div>
                     <a id="enable-settings" class="plugin-link disabled" href="">Habilitar Dashboard</a>
                     <a id="disable-settings" class="plugin-link" href="">Desabilitar Dashboard</a>
                 </div>';
         } else {
             $this->content->text =
                 '<div class="plugin-link-container">
+                    <div>
+                        <a id="access-dashboard" class="access-dashboard-button disabled" href="'. $url .'" target="_blank">Acessar Dashboard</a>
+                    </div>
                     <a id="enable-settings" class="plugin-link" href="">Habilitar Dashboard</a>
                     <a id="disable-settings" class="plugin-link disabled" href="">Desabilitar Dashboard</a>
                 </div>';
