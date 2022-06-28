@@ -26,7 +26,8 @@ class mad_dashboard extends external_api {
     return new external_multiple_structure(
       new external_single_structure(
         array(
-          'enabled' => new external_value(PARAM_BOOL, VALUE_REQUIRED)
+          'enabled' => new external_value(PARAM_BOOL, VALUE_REQUIRED),
+          'url' => new external_value(PARAM_TEXT, VALUE_REQUIRED)
         )
       )
     );
@@ -37,25 +38,32 @@ class mad_dashboard extends external_api {
     global $DB, $USER, $COURSE;
 
     $params = self::validate_parameters(self::enable_parameters(),
-      array(
-        'courseId' => $courseId,
-      )
-    );
+       array(
+         'courseId' => $courseId,
+       )
+     );
 
     $dashboard_setting = $DB->get_record(
-      "mad2api_dashboard_settings",
-      array('user_id' => $USER->id, 'course_id' => $courseId)
-    );
+       "mad2api_dashboard_settings",
+       array('user_id' => $USER->id, 'course_id' => $courseId)
+     );
 
     if (isset($dashboard_setting) && $dashboard_setting->is_enabled == 1) {
-      return array(['enabled' => true]);
+      $response = self::api_dashboad_auth_url($params['courseId']);
+
+      if (!property_exists($response, 'url')) {
+        #TODO should return a string to pop up and error
+        return;
+      }
+
+      return array(['enabled' => true, 'url' => $response["url"]]);
     }
 
     $database_response = false;
-    $tokenHex = bin2hex(random_bytes(16));
-    $response = self::api_enable_call($params['courseId'], $tokenHex);
+    $response = self::api_enable_call($params['courseId']);
 
-    if (!property_exists($response, 'plugin-info')) {
+    if (!property_exists($response, 'url')) {
+      #TODO should return a string to pop up and error
       return;
     }
 
@@ -66,7 +74,7 @@ class mad_dashboard extends external_api {
       'last_log_date' => date('Y-m-d'),
       'course_id' => intval($params['courseId']),
       'is_enabled' => 1,
-      'token' => $tokenHex
+      'token' => $USER->email,
     );
 
     if (isset($dashboard_setting->id)) {
@@ -78,7 +86,7 @@ class mad_dashboard extends external_api {
 
     self::upload_logs($params['courseId']);
 
-    return array(['enabled' => $database_response]);
+    return array(['enabled' => $database_response, 'url' => $response["url"]]);
   }
 
   public static function disable_parameters() {
@@ -148,28 +156,62 @@ class mad_dashboard extends external_api {
     return $DB->get_records('role_assignments', array('contextid' => $contextid, 'userid' => $userid));
   }
 
-  public static function api_enable_call($courseId, $tokenHex){
+  public static function api_enable_call($courseId){
     global $COURSE, $USER, $DB;
-    $campus = get_config('mad2api', 'campus');
+
+    $access_key = get_config('mad2api', 'access_key');
+    $aws_secret_key = get_config('mad2api', 'aws_secret_key');
+    $api_key = get_config('mad2api', 'api_key');
+
     $organization = get_config('mad2api', 'organization');
     $data = array(
       'class_code' => $courseId,
-      'campus' => $campus,
       'organization' => $organization,
       'professor' => array(
         "name" => "$USER->firstname $USER->lastname",
         "email" => $USER->email,
-        "code_id" => $tokenHex,
+        "code_id" => $USER->email,
       ),
     );
+
+    var_dump($data);
     $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL,"http://localhost:8000/api/plugin/enable");
+    curl_setopt($ch, CURLOPT_URL,"http://host.docker.internal:8080/api/plugin/enable");
     curl_setopt($ch, CURLOPT_POST, 1);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));  //Post Fields
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     $headers = [
       'accept: application/json',
       'Content-Type: application/json',
+      "API-KEY: {$api_key}",
+
+    ];
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    $server_output = curl_exec($ch);
+    curl_close($ch);
+
+    return json_decode($server_output);
+  }
+  public static function api_dashboard_auth_url($courseId){
+    global $COURSE, $USER, $DB;
+
+    $api_key = get_config('mad2api', 'api_key');
+
+    $data = array(
+      'class_code' => $courseId,
+      "code_id" => $USER->email,
+    );
+
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL,"http://host.docker.internal:8080/api/plugin/enabled");
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));  //Post Fields
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    $headers = [
+      'accept: application/json',
+      'Content-Type: application/json',
+      "API-KEY: {$api_key}",
+
     ];
     curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
     $server_output = curl_exec($ch);
@@ -200,13 +242,18 @@ class mad_dashboard extends external_api {
 
   public static function upload_logs($courseId)
   {
-    require_once('helpers/S3.php');
     global $DB, $COURSE, $CFG, $USER;
-    $campus = get_config('mad2api', 'campus');
+
+    require_once('helpers/S3.php');
+
+    $access_key = get_config('mad2api', 'access_key');
+    $aws_secret_key = get_config('mad2api', 'aws_secret_key');
     $organization = get_config('mad2api', 'organization');
+
     $course_settings = $DB->get_record("mad2api_dashboard_settings", ['user_id' => $USER->id, 'course_id' => $courseId]);
 
- $s3 = new \S3("KEY", "TOKEN", false);
+    $s3 = new \S3($access_key, $aws_secret_key, false,  "host.docker.internal:4566");
+
     // echo "S3::listBuckets(): ".print_r($s3->listBuckets(), 1)."\n";
     // return;
     $logs_query = '
@@ -244,7 +291,17 @@ class mad_dashboard extends external_api {
         }
      }
     str_putcsv($logs);
-    $s3->putObject(file_get_contents('./temp.csv'), 'futurogfp-documents', "unprocessed/$organization/$campus/$course_settings->token/$courseId.csv", \S3::ACL_PRIVATE, array(), array('Content-Type' => 'text/csv'));
+    $s3->putObject(
+      file_get_contents('./temp.csv'),
+      'moodle-logs',
+      "unprocessed/$organization/$course_settings->token/$courseId.csv",
+      \S3::ACL_PRIVATE,
+      array(),
+      array(
+        'Content-Type' => 'text/csv'
+
+      )
+    );
   }
 
   public static function get_dashboard_status($courseId)
@@ -263,12 +320,14 @@ class mad_dashboard extends external_api {
 
   public static function scheduled_log(){
     global $DB, $COURSE;
+
     $query = "
       SELECT course_id
       FROM `mdl_mad2api_dashboard_settings`
       WHERE is_enabled = 1;
     ";
     $active_courses = $DB->get_records_sql($query);
+
     foreach($active_courses as $active_course){
       self::upload_logs($active_course->course_id);
     }
