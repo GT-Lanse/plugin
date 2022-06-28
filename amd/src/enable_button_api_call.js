@@ -1,11 +1,11 @@
 define(['jquery', 'core/ajax', 'core/notification'], function($, ajax, notification) {
   return {
-    init: () => {
+    init: courseId => {
       $('#enable-settings').click((event) => {
         event.preventDefault();
 
         const args = {};
-        args.courseId = 2;
+        args.courseId = courseId;
 
         const request = {
           methodname: 'block_mad2api_enable_course',
@@ -20,6 +20,9 @@ define(['jquery', 'core/ajax', 'core/notification'], function($, ajax, notificat
           if (body.enabled) {
             $('#disable-settings').removeClass('disabled');
             $('#enable-settings').addClass('disabled');
+
+            $("#access-dashboard").attr("href", body.url);
+            $('#access-dashboard').removeClass('disabled');
           }
         });
       });
@@ -28,7 +31,7 @@ define(['jquery', 'core/ajax', 'core/notification'], function($, ajax, notificat
         event.preventDefault();
 
         const args = {};
-        args.courseId = 2;
+        args.courseId = courseId;
 
         const request = {
           methodname: 'block_mad2api_disable_course',
@@ -43,6 +46,7 @@ define(['jquery', 'core/ajax', 'core/notification'], function($, ajax, notificat
           if (body.disabled) {
             $('#enable-settings').removeClass('disabled');
             $('#disable-settings').addClass('disabled');
+            $('#access-dashboard').addClass('disabled');
           }
         });
       });
