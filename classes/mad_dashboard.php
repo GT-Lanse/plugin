@@ -49,7 +49,7 @@ class mad_dashboard extends external_api {
      );
 
     if (isset($dashboard_setting) && $dashboard_setting->is_enabled == 1) {
-      $response = self::api_dashboad_auth_url($params['courseId']);
+      $response = self::api_dashboard_auth_url($params['courseId']);
 
       if (!property_exists($response, 'url')) {
         #TODO should return a string to pop up and error
@@ -174,7 +174,6 @@ class mad_dashboard extends external_api {
       ),
     );
 
-    var_dump($data);
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL,"http://host.docker.internal:8080/api/plugin/enable");
     curl_setopt($ch, CURLOPT_POST, 1);
