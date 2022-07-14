@@ -3,9 +3,8 @@ namespace block_mad2api;
 //use helpers\S3;
 defined('MOODLE_INTERNAL') || die();
 
-// require(__DIR__.'/../../config.php');
-
 require_once("$CFG->libdir/externallib.php");
+
 use external_api;
 use external_function_parameters;
 use external_single_structure;
@@ -26,8 +25,8 @@ class mad_dashboard extends external_api {
     return new external_multiple_structure(
       new external_single_structure(
         array(
-          'enabled' => new external_value(PARAM_BOOL, VALUE_REQUIRED),
-          'url' => new external_value(PARAM_TEXT, VALUE_REQUIRED)
+          'enabled' => new external_value(PARAM_BOOL, VALUE_DEFAULT, true),
+          'url' => new external_value(PARAM_TEXT, VALUE_DEFAULT, "")
         )
       )
     );
@@ -167,14 +166,15 @@ class mad_dashboard extends external_api {
     $data = array(
       'class_code' => $courseId,
       'organization' => $organization,
-      'professor' => array(
-        "name" => "$USER->firstname $USER->lastname",
-        "email" => $USER->email,
-        "code_id" => $USER->email,
+      'teacher' => array(
+        'id' => $USER->id,
+        'firstname' => $USER->firstname,
+        'lastname' => $USER->lastname,
+        'email' => $USER->email
       ),
+      'students' => self::get_course_students($courseId)
     );
 
-    var_dump($data);
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL,"http://host.docker.internal:8080/api/plugin/enable");
     curl_setopt($ch, CURLOPT_POST, 1);
@@ -192,6 +192,7 @@ class mad_dashboard extends external_api {
 
     return json_decode($server_output);
   }
+
   public static function api_dashboard_auth_url($courseId){
     global $COURSE, $USER, $DB;
 
@@ -228,6 +229,20 @@ class mad_dashboard extends external_api {
       FROM mdl_mad2api_dashboard_settings
       WHERE course_id = $COURSE->id"
     );
+  }
+
+  function get_course_students($courseId) {
+    global $DB;
+
+    return $DB->get_records_sql("
+      SELECT u.firstname, u.lastname, u.id, u.email
+      FROM {course} c
+      JOIN {context} ct ON c.id = ct.instanceid
+      JOIN {role_assignments} ra ON ra.contextid = ct.id
+      JOIN {user} u ON u.id = ra.userid
+      JOIN {role} r ON r.id = ra.roleid
+      where c.id = {$courseId} AND r.id = 5
+    ");
   }
 
   public static function get_course_start_end_date()
