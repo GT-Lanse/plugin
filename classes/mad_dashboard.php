@@ -292,7 +292,7 @@ class mad_dashboard extends external_api {
     str_putcsv($logs);
     $s3->putObject(
       file_get_contents('./temp.csv'),
-      'moodle-logs',
+      'moodlelogs-gt',
       "unprocessed/$organization/$course_settings->token/$courseId.csv",
       \S3::ACL_PRIVATE,
       array(),
