@@ -56,7 +56,7 @@ class mad_dashboard extends external_api {
         return;
       }
 
-      return array(['enabled' => true, 'url' => $response["url"] || "aaa"]);
+      return array(['enabled' => true, 'url' => $response["url"]]);
     }
 
     $database_response = false;
@@ -84,9 +84,9 @@ class mad_dashboard extends external_api {
       $database_response = $DB->insert_record('mad2api_dashboard_settings', $record, false);
     }
 
-    // self::upload_logs($params['courseId']);
+    self::upload_logs($params['courseId']);
 
-    return array(['enabled' => $database_response, 'url' => $response["url"] || "aaaa"]);
+    return array(['enabled' => $database_response, 'url' => $response["url"]]);
   }
 
   public static function disable_parameters() {
@@ -174,7 +174,6 @@ class mad_dashboard extends external_api {
       ),
     );
 
-    var_dump($data);
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL,"http://host.docker.internal:8080/api/plugin/enable");
     curl_setopt($ch, CURLOPT_POST, 1);
