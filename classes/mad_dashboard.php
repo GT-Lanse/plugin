@@ -56,7 +56,7 @@ class mad_dashboard extends external_api {
         return;
       }
 
-      return array(['enabled' => true, 'url' => $response["url"]]);
+      return array(['enabled' => true, 'url' => $response["url"] || "aaa"]);
     }
 
     $database_response = false;
@@ -84,9 +84,9 @@ class mad_dashboard extends external_api {
       $database_response = $DB->insert_record('mad2api_dashboard_settings', $record, false);
     }
 
-    self::upload_logs($params['courseId']);
+    // self::upload_logs($params['courseId']);
 
-    return array(['enabled' => $database_response, 'url' => $response["url"]]);
+    return array(['enabled' => $database_response, 'url' => $response["url"] || "aaaa"]);
   }
 
   public static function disable_parameters() {
@@ -228,6 +228,25 @@ class mad_dashboard extends external_api {
       FROM mdl_mad2api_dashboard_settings
       WHERE course_id = $COURSE->id"
     );
+  }
+
+  /**
+    * Returns the course students
+    * @param object $cm
+    * @return array
+  */
+  function get_course_students($courseId) {
+    global $DB;
+
+    return $DB->get_records_sql("
+      SELECT u.firstname, u.lastname, u.id, u.email
+      FROM {course} c
+      JOIN {context} ct ON c.id = ct.instanceid
+      JOIN {role_assignments} ra ON ra.contextid = ct.id
+      JOIN {user} u ON u.id = ra.userid
+      JOIN {role} r ON r.id = ra.roleid
+      where c.id = {$courseId} AND r.id = 5
+    ");
   }
 
   public static function get_course_start_end_date()
