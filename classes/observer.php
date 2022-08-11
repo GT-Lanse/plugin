@@ -44,10 +44,12 @@ class block_mad2api_observer {
         $ch = curl_init();
         $url = "http://host.docker.internal:8080/api/plugin/courses/{$event->courseid}/events/new";
         $api_key = get_config('mad2api', 'api_key');
-        $user = $DB->get_record('user', array('id' => $event->relateduserid));
+        $related_user = $DB->get_record('user', array('id' => $event->relateduserid));
+        $user = $DB->get_record('user', array('id' => $event->userid));
         $data = array(
           'event_name' => end(explode("\\", $event->eventname)),
           'course_id' => $event->courseid,
+          'related_user' => $related_user,
           'user' => $user,
           'other' => $event->other
         );
