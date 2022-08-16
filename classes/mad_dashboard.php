@@ -3,7 +3,7 @@ namespace block_mad2api;
 defined('MOODLE_INTERNAL') || die();
 
 require_once("$CFG->libdir/externallib.php");
-require_once('classes/task/mad_send_logs.php');
+require_once('task/mad_send_logs.php');
 
 use external_api;
 use external_function_parameters;
