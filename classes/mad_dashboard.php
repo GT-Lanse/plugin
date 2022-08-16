@@ -3,6 +3,7 @@ namespace block_mad2api;
 defined('MOODLE_INTERNAL') || die();
 
 require_once("$CFG->libdir/externallib.php");
+require_once('classes/task/mad_send_logs.php');
 
 use external_api;
 use external_function_parameters;
@@ -67,7 +68,14 @@ class mad_dashboard extends external_api {
       return array(['enabled' => false, 'url' => '', 'error' => true]);
     }
 
-    self::api_send_logs($params['courseId']);
+    $task = new \block_mad2api\task\mad_send_logs();
+    $task->set_blocking(false);
+    $task -> set_next_run_time(time() + 10);
+    $task->set_custom_data(array(
+        'course_id' => $params['courseId']
+    ));
+
+    \core\task\manager::queue_adhoc_task($task, true);
 
     $record = array(
       'user_id' => $USER->id,
@@ -207,7 +215,7 @@ class mad_dashboard extends external_api {
     global $DB;
 
     $api_key = get_config('mad2api', 'api_key');
-    $count = get_course_students_count($course_id);
+    $count = self::get_course_students_count($course_id);
     $per_page = 20;
     $end_page = $count / $per_page;
 
@@ -216,7 +224,7 @@ class mad_dashboard extends external_api {
 
       $data = array(
         'course_id' => $course_id,
-        'students' => get_course_students($course_id, $per_page, $offset)
+        'students' => self::get_course_students($course_id, $per_page, $offset)
       );
       $headers = array(
         'accept: application/json',
@@ -226,7 +234,7 @@ class mad_dashboard extends external_api {
 
       $ch = curl_init();
 
-      curl_setopt($ch, CURLOPT_URL,"https://api.lanse.prd.apps.kloud.rnp.br/api/plugin/courses/{$course_id}/students");
+      curl_setopt($ch, CURLOPT_URL,"http://localhost:3000/students");
       curl_setopt($ch, CURLOPT_POST, 1);
       curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));  //Post Fields
       curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -283,7 +291,7 @@ class mad_dashboard extends external_api {
 
       $ch = curl_init();
 
-      curl_setopt($ch, CURLOPT_URL,"https://api.lanse.prd.apps.kloud.rnp.br/api/plugin/courses/{$course_id}/logs");
+      curl_setopt($ch, CURLOPT_URL,"http://localhost:3000/test");
       curl_setopt($ch, CURLOPT_POST, 1);
       curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));  //Post Fields
       curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
