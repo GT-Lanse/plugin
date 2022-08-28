@@ -187,6 +187,7 @@ class mad_dashboard extends external_api {
         'email' => $USER->email,
         'code_id' => $USER->email
       ),
+      'students' => self::get_course_students($courseId)
     );
 
     $ch = curl_init();
