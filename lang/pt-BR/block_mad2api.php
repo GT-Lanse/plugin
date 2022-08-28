@@ -23,22 +23,22 @@
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-$string['blockstring'] = 'Block string';
-$string['descconfig'] = 'Description of the config section';
-$string['descfoo'] = 'Config description';
-$string['headerconfig'] = 'Config section header';
-$string['labelfoo'] = 'Config label';
-$string['mad2api:addinstance'] = 'Add mad2api block';
-$string['mad2api:myaddinstance'] = 'Add mad2api block to my moodle';
+$string['blockstring'] = 'Texto do plugin';
+$string['descconfig'] = 'Descrição da seção de configuração';
+$string['descfoo'] = 'Descrição de configuração';
+$string['headerconfig'] = 'Cabeçalho da seção de configuração';
+$string['labelfoo'] = 'Legenda da configuração';
+$string['mad2api:addinstance'] = 'Adicionar Mad2api';
+$string['mad2api:myaddinstance'] = 'Adicionar Mad2api to my moodle';
 $string['pluginname'] = 'Dashboard Analytics V2';
-$string['error_modal_title'] = 'Error on enabling course';
-$string['access_dashboard'] = 'Access Dashboard';
-$string['enable_dashboard'] = 'Enable Dashboard';
-$string['disable_dashboard'] = 'Disable Dashboard';
+$string['error_modal_title'] = 'Erro ao habilitar curso';
+$string['access_dashboard'] = 'Acessar Dashboard';
+$string['enable_dashboard'] = 'Habilitar Dashboard';
+$string['disable_dashboard'] = 'Desabilitar Dashboard';
 $string['error_modal_body'] = "
   <p>
-    Our team is working to resolve the issue as soon as possible.
-    Wait a moment and try again,
-    if the problem persists, contact us at: <b>mad2api@mail.com.br</b>.
+    Nossa equipe está trabalhando para solucionar o problema o quanto antes.
+    Aguarde um momento e tente novamente,
+    caso o problema persista entre em contato através de: <b>mad2api@mail.com.br</b>.
   </p>
 ";
