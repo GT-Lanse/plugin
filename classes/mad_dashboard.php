@@ -235,7 +235,7 @@ class mad_dashboard extends external_api {
 
       $ch = curl_init();
 
-      curl_setopt($ch, CURLOPT_URL,"http://localhost:3000/students");
+      curl_setopt($ch, CURLOPT_URL,"http://localhost:8080/students");
       curl_setopt($ch, CURLOPT_POST, 1);
       curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));  //Post Fields
       curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -292,7 +292,7 @@ class mad_dashboard extends external_api {
 
       $ch = curl_init();
 
-      curl_setopt($ch, CURLOPT_URL,"http://localhost:3000/test");
+      curl_setopt($ch, CURLOPT_URL,"https://api.lanse.prd.apps.kloud.rnp.br/api/plugin/courses/{$course_id}/logs");
       curl_setopt($ch, CURLOPT_POST, 1);
       curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));  //Post Fields
       curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
