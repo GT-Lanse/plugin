@@ -3,9 +3,8 @@ namespace block_mad2api;
 //use helpers\S3;
 defined('MOODLE_INTERNAL') || die();
 
-// require(__DIR__.'/../../config.php');
-
 require_once("$CFG->libdir/externallib.php");
+
 use external_api;
 use external_function_parameters;
 use external_single_structure;
@@ -26,8 +25,8 @@ class mad_dashboard extends external_api {
     return new external_multiple_structure(
       new external_single_structure(
         array(
-          'enabled' => new external_value(PARAM_BOOL, VALUE_REQUIRED),
-          'url' => new external_value(PARAM_TEXT, VALUE_REQUIRED)
+          'enabled' => new external_value(PARAM_BOOL, VALUE_DEFAULT, true),
+          'url' => new external_value(PARAM_TEXT, VALUE_DEFAULT, "")
         )
       )
     );
@@ -49,7 +48,7 @@ class mad_dashboard extends external_api {
      );
 
     if (isset($dashboard_setting) && $dashboard_setting->is_enabled == 1) {
-      $response = self::api_dashboad_auth_url($params['courseId']);
+      $response = self::api_dashboard_auth_url($params['courseId']);
 
       if (!property_exists($response, 'url')) {
         #TODO should return a string to pop up and error
@@ -167,11 +166,13 @@ class mad_dashboard extends external_api {
     $data = array(
       'class_code' => $courseId,
       'organization' => $organization,
-      'professor' => array(
-        "name" => "$USER->firstname $USER->lastname",
-        "email" => $USER->email,
-        "code_id" => $USER->email,
+      'teacher' => array(
+        'id' => $USER->id,
+        'firstname' => $USER->firstname,
+        'lastname' => $USER->lastname,
+        'email' => $USER->email
       ),
+      'students' => self::get_course_students($courseId)
     );
 
     $ch = curl_init();
@@ -191,6 +192,7 @@ class mad_dashboard extends external_api {
 
     return json_decode($server_output);
   }
+
   public static function api_dashboard_auth_url($courseId){
     global $COURSE, $USER, $DB;
 
@@ -229,11 +231,14 @@ class mad_dashboard extends external_api {
     );
   }
 
+<<<<<<< classes/mad_dashboard.php
   /**
     * Returns the course students
     * @param object $cm
     * @return array
   */
+=======
+>>>>>>> classes/mad_dashboard.php
   function get_course_students($courseId) {
     global $DB;
 
@@ -311,7 +316,7 @@ class mad_dashboard extends external_api {
     str_putcsv($logs);
     $s3->putObject(
       file_get_contents('./temp.csv'),
-      'moodle-logs',
+      'moodlelogs-gt',
       "unprocessed/$organization/$course_settings->token/$courseId.csv",
       \S3::ACL_PRIVATE,
       array(),
