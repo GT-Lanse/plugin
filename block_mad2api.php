@@ -54,6 +54,7 @@ class block_mad2api extends block_base {
         if ($enabled) {
             $course_info = \block_mad2api\mad_dashboard::enable($COURSE->id);
             $url = $course_info[0]['url'];
+
             $this->content->text =
                 '<div class="plugin-link-container">
                     <div>

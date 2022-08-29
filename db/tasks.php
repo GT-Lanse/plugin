@@ -1,13 +1,13 @@
 <?php
 defined('MOODLE_INTERNAL') || die();
 $tasks = array(
-    array(
-        'classname' => 'block_mad2api\task\madLogger',
-        'blocking' => 0,
-        'minute' => '*',
-        'hour' => '*',
-        'day' => '*/1',
-        'month' => '*',
-        'dayofweek' => '*',
-    )
+  array(
+    'classname' => 'block_mad2api\task\mad_logger',
+    'blocking' => 0,
+    'minute' => '*/5',
+    'hour' => '*',
+    'day' => '*',
+    'month' => '*',
+    'dayofweek' => '*',
+  )
 );

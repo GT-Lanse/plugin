@@ -77,11 +77,19 @@ class mad_dashboard extends external_api {
 
     \core\task\manager::queue_adhoc_task($task, true);
 
-    $record = array(
+    $record_course_logs = array(
+      'created_at' => date('Y-m-d H:i:s'),
+      'updated_at' => date('Y-m-d H:i:s'),
+      'course_id'  => intval($params['courseId']),
+      'status'     => 'todo'
+    );
+
+    $DB->update_record('mad2api_course_logs', $record_course_logs, false);
+
+    $record_dashboard_settings = array(
       'user_id' => $USER->id,
       'created_at' => date('Y-m-d H:i:s'),
       'updated_at' => date('Y-m-d H:i:s'),
-      'last_log_date' => date('Y-m-d'),
       'course_id' => intval($params['courseId']),
       'is_enabled' => 1,
       'token' => $USER->email,
@@ -89,9 +97,10 @@ class mad_dashboard extends external_api {
 
     if (isset($dashboard_setting->id)) {
       $record['id'] = $dashboard_setting->id;
-      $database_response = $DB->update_record('mad2api_dashboard_settings', $record, false);
+
+      $database_response = $DB->update_record('mad2api_dashboard_settings', $record_dashboard_settings, false);
     } else {
-      $database_response = $DB->insert_record('mad2api_dashboard_settings', $record, false);
+      $database_response = $DB->insert_record('mad2api_dashboard_settings', $record_dashboard_settings, false);
     }
 
     return array(['enabled' => $database_response, 'url' => $response->url, 'error' => false ]);
@@ -235,7 +244,7 @@ class mad_dashboard extends external_api {
 
       $ch = curl_init();
 
-      curl_setopt($ch, CURLOPT_URL,"http://localhost:8080/students");
+      curl_setopt($ch, CURLOPT_URL,"https://api.lanse.prd.apps.kloud.rnp.br/api/plugin/courses/{$course_id}/students");
       curl_setopt($ch, CURLOPT_POST, 1);
       curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));  //Post Fields
       curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
