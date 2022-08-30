@@ -250,7 +250,7 @@ class mad_dashboard extends external_api {
       JOIN mdl_role_assignments B
       JOIN mdl_course mc on mc.id = m.courseid
       JOIN mdl_user mu on mu.id = m.userid
-      WHERE B.roleid = 5 AND m.courseid = 2 AND B.userid = m.userid
+      WHERE B.roleid = 5 AND m.courseid = {$course_id} AND B.userid = m.userid
     ";
     $count = $DB->count_records_sql($count_sql);
     $per_page = 20;
