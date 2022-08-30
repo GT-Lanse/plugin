@@ -24,6 +24,7 @@ class mad_logger extends \core\task\scheduled_task {
 
     foreach ($records as $record) {
       $data = array(
+        'id' => $record->id,
         'course_id' => $record->course_id,
         'updated_at' => date('Y-m-d H:i:s'),
         'status' => 'wip'
@@ -35,6 +36,7 @@ class mad_logger extends \core\task\scheduled_task {
       \block_mad2api\mad_dashboard::api_send_students($record->course_id);
 
       $data = array(
+        'id' => $record->id,
         'course_id' => $record->course_id,
         'updated_at' => date('Y-m-d H:i:s'),
         'status' => 'done'
