@@ -48,7 +48,6 @@ class mad_dashboard extends external_api {
       array('user_id' => $USER->id, 'course_id' => $courseId)
     );
 
-
     if (isset($dashboard_setting) && $dashboard_setting->is_enabled == 1) {
       $response = self::api_dashboard_auth_url($params['courseId']);
 
@@ -68,24 +67,6 @@ class mad_dashboard extends external_api {
       return array(['enabled' => false, 'url' => '', 'error' => true]);
     }
 
-    $task = new \block_mad2api\task\mad_send_logs();
-    $task->set_blocking(false);
-    $task -> set_next_run_time(time() + 10);
-    $task->set_custom_data(array(
-        'course_id' => $params['courseId']
-    ));
-
-    \core\task\manager::queue_adhoc_task($task, true);
-
-    $record_course_logs = array(
-      'created_at' => date('Y-m-d H:i:s'),
-      'updated_at' => date('Y-m-d H:i:s'),
-      'course_id'  => intval($params['courseId']),
-      'status'     => 'todo'
-    );
-
-    $DB->update_record('mad2api_course_logs', $record_course_logs, false);
-
     $record_dashboard_settings = array(
       'user_id' => $USER->id,
       'created_at' => date('Y-m-d H:i:s'),
@@ -101,6 +82,15 @@ class mad_dashboard extends external_api {
       $database_response = $DB->update_record('mad2api_dashboard_settings', $record_dashboard_settings, false);
     } else {
       $database_response = $DB->insert_record('mad2api_dashboard_settings', $record_dashboard_settings, false);
+
+      $record_course_logs = array(
+        'created_at' => date('Y-m-d H:i:s'),
+        'updated_at' => date('Y-m-d H:i:s'),
+        'course_id'  => intval($params['courseId']),
+        'status'     => 'todo'
+      );
+
+      $DB->insert_record('mad2api_course_logs', $record_course_logs, false);
     }
 
     return array(['enabled' => $database_response, 'url' => $response->url, 'error' => false ]);
@@ -189,14 +179,7 @@ class mad_dashboard extends external_api {
         'firstname' => $USER->firstname,
         'lastname' => $USER->lastname,
         'email' => $USER->email
-      ),
-      'professor' => array(
-        'id' => $USER->id,
-        'name' => $USER->firstname,
-        'email' => $USER->email,
-        'code_id' => $USER->email
-      ),
-      'students' => self::get_course_students($courseId)
+      )
     );
 
     $ch = curl_init();
