@@ -2040,7 +2040,8 @@ final class S3Request
 		if ($this->bucket !== '')
 		{
 			#TODO when we runnig this local this regex didnt work
-			if (false && $this->__dnsBucketName($this->bucket))
+      if($this->__dnsBucketName($this->bucket))
+			#if (false && $this->__dnsBucketName($this->bucket))
 			{
 				$this->headers['Host'] = $this->bucket.'.'.$this->endpoint;
 				$this->resource = '/'.$this->bucket.$this->uri;
