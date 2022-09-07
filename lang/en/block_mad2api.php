@@ -30,4 +30,12 @@ $string['headerconfig'] = 'Config section header';
 $string['labelfoo'] = 'Config label';
 $string['mad2api:addinstance'] = 'Add mad2api block';
 $string['mad2api:myaddinstance'] = 'Add mad2api block to my moodle';
-$string['pluginname'] = 'mad2api';
+$string['pluginname'] = 'Dashboard Analytics V2';
+$string['error_modal_title'] = 'Erro ao habilitar curso';
+$string['error_modal_body'] = "
+  <p>
+    Nossa equipe está trabalhando para solucionar o problema o quanto antes.
+    Aguarde um momento e tente novamente,
+    caso o problema percista entre em contato através de: <b>mad2api@mail.com.br</b>.
+  </p>
+";
