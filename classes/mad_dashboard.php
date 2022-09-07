@@ -307,6 +307,7 @@ class mad_dashboard extends external_api {
     );
 
     $ch = curl_init();
+
     curl_setopt($ch, CURLOPT_URL,"https://api.lanse.prd.apps.kloud.rnp.br/api/plugin/enabled");
     curl_setopt($ch, CURLOPT_POST, 1);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));  //Post Fields
