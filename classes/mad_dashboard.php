@@ -172,7 +172,10 @@ class mad_dashboard extends external_api {
     $organization = get_config('mad2api', 'organization');
 
     $data = array(
-      'class_code' => $courseId,
+      'course' => array(
+        'id' => $COURSE->id,
+        'fullname' => $COURSE->fullname
+      ),
       'organization' => $organization,
       'teacher' => array(
         'id' => $USER->id,
