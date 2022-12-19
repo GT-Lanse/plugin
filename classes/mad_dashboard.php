@@ -38,10 +38,10 @@ class mad_dashboard extends external_api {
     global $DB, $USER, $COURSE;
 
     $params = self::validate_parameters(self::enable_parameters(),
-       array(
-         'courseId' => $courseId,
-       )
-     );
+      array(
+        'courseId' => $courseId,
+      )
+    );
 
     $dashboard_setting = $DB->get_record(
       "mad2api_dashboard_settings",
