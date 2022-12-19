@@ -51,7 +51,7 @@ class mad_dashboard extends external_api {
     if (isset($dashboard_setting) && $dashboard_setting->is_enabled == 1) {
       $response = self::api_dashboard_auth_url($params['courseId']);
 
-      if (!property_exists($response, 'url')) {
+      if (!$response || !property_exists($response, 'url')) {
         return array(['enabled' => false, 'url' => '', 'error' => true]);
       }
 
@@ -172,7 +172,10 @@ class mad_dashboard extends external_api {
     $organization = get_config('mad2api', 'organization');
 
     $data = array(
-      'class_code' => $courseId,
+      'course' => array(
+        'id' => $COURSE->id,
+        'fullname' => $COURSE->fullname
+      ),
       'organization' => $organization,
       'teacher' => array(
         'id' => $USER->id,
@@ -227,7 +230,7 @@ class mad_dashboard extends external_api {
 
       $ch = curl_init();
 
-      curl_setopt($ch, CURLOPT_URL,"https://api.lanse.prd.apps.kloud.rnp.br/api/plugin/courses/{$course_id}/students");
+      curl_setopt($ch, CURLOPT_URL,"api.lanse.prd.apps.kloud.rnp.br/api/plugin/courses/{$course_id}/students");
       curl_setopt($ch, CURLOPT_POST, 1);
       curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));  //Post Fields
       curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -284,7 +287,7 @@ class mad_dashboard extends external_api {
 
       $ch = curl_init();
 
-      curl_setopt($ch, CURLOPT_URL,"https://api.lanse.prd.apps.kloud.rnp.br/api/plugin/courses/{$course_id}/logs");
+      curl_setopt($ch, CURLOPT_URL,"api.lanse.prd.apps.kloud.rnp.br/api/plugin/courses/{$course_id}/logs");
       curl_setopt($ch, CURLOPT_POST, 1);
       curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));  //Post Fields
       curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -302,24 +305,21 @@ class mad_dashboard extends external_api {
     $api_key = get_config('mad2api', 'api_key');
 
     $data = array(
-      'class_code' => $courseId,
-      "code_id" => $USER->email,
+      'class_code' => "{$courseId}",
+      'code_id' => $USER->id,
     );
-
-    $ch = curl_init();
-
-    curl_setopt($ch, CURLOPT_URL,"https://api.lanse.prd.apps.kloud.rnp.br/api/plugin/enabled");
-    curl_setopt($ch, CURLOPT_POST, 1);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));  //Post Fields
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
     $headers = [
       'accept: application/json',
       'Content-Type: application/json',
-      "API-KEY: {$api_key}",
-
+      "API-KEY: {$api_key}"
     ];
 
+    $ch = curl_init();
+
+    curl_setopt($ch, CURLOPT_URL,"api.lanse.prd.apps.kloud.rnp.br/api/plugin/enabled");
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));  //Post Fields
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
     $server_output = curl_exec($ch);
