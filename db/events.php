@@ -25,7 +25,13 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$observers = array (
+$observers = array(
+  array(
+    'eventname' => '\core\event\user_graded',
+    'callback'  => 'block_mad2api_observer::new_event',
+    'internal'  => false, // This means that we get events only after transaction commit.
+    'priority'  => 1000,
+  ),
   array(
     'eventname' => '\core\event\user_enrolment_created',
     'callback'  => 'block_mad2api_observer::new_event',
@@ -43,7 +49,7 @@ $observers = array (
     'callback'  => 'block_mad2api_observer::new_event',
     'internal'  => false, // This means that we get events only after transaction commit.
     'priority'  => 1000,
-  )
+  ),
   array(
     'eventname' => '\mod_book\event\course_module_viewed',
     'callback'  => 'block_mad2api_observer::new_event',
