@@ -174,7 +174,9 @@ class mad_dashboard extends external_api {
     $data = array(
       'course' => array(
         'id' => $COURSE->id,
-        'fullname' => $COURSE->fullname
+        'fullname' => $COURSE->fullname,
+        'startdate' => $COURSE->startdate,
+        'enddate' => $COURSE->enddate
       ),
       'organization' => $organization,
       'teacher' => array(
