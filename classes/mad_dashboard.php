@@ -189,7 +189,7 @@ class mad_dashboard extends external_api {
 
     $ch = curl_init();
 
-    curl_setopt($ch, CURLOPT_URL,"api.lanse.prd.apps.kloud.rnp.br/api/plugin/enable");
+    curl_setopt($ch, CURLOPT_URL, self::get_url_for("api/plugin/enable"));
     curl_setopt($ch, CURLOPT_POST, 1);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));  //Post Fields
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -232,7 +232,7 @@ class mad_dashboard extends external_api {
 
       $ch = curl_init();
 
-      curl_setopt($ch, CURLOPT_URL,"api.lanse.prd.apps.kloud.rnp.br/api/plugin/courses/{$course_id}/students");
+      curl_setopt($ch, CURLOPT_URL, self::get_url_for("api/plugin/courses/{$course_id}/students"));
       curl_setopt($ch, CURLOPT_POST, 1);
       curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));  //Post Fields
       curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -250,9 +250,7 @@ class mad_dashboard extends external_api {
     $api_key = get_config('mad2api', 'api_key');
 
     $count_sql = "
-      SELECT  COUNT(*)
-      FROM mdl_logstore_standard_log m
-      JOIN mdl_role_assignments B
+      SELECT  COUNT(*)$organization = get_config('mad2api', 'organization');ignments B
       JOIN mdl_course mc on mc.id = m.courseid
       JOIN mdl_user mu on mu.id = m.userid
       WHERE B.roleid = 5 AND m.courseid = {$course_id} AND B.userid = m.userid
@@ -289,7 +287,7 @@ class mad_dashboard extends external_api {
 
       $ch = curl_init();
 
-      curl_setopt($ch, CURLOPT_URL,"api.lanse.prd.apps.kloud.rnp.br/api/plugin/courses/{$course_id}/logs");
+      curl_setopt($ch, CURLOPT_URL, self::get_url_for("api/plugin/courses/{$course_id}/logs"));
       curl_setopt($ch, CURLOPT_POST, 1);
       curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));  //Post Fields
       curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -318,7 +316,7 @@ class mad_dashboard extends external_api {
 
     $ch = curl_init();
 
-    curl_setopt($ch, CURLOPT_URL,"api.lanse.prd.apps.kloud.rnp.br/api/plugin/enabled");
+    curl_setopt($ch, CURLOPT_URL, self::get_url_for("api/plugin/enabled"));
     curl_setopt($ch, CURLOPT_POST, 1);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));  //Post Fields
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -368,5 +366,12 @@ class mad_dashboard extends external_api {
     ");
 
     return $students;
+  }
+
+  private static function get_url_for($path)
+  {
+    $api_url = get_config('mad2api', 'api_url');
+
+    return "{$api_url}/{$path}";
   }
 }
