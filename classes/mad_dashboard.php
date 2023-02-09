@@ -250,7 +250,7 @@ class mad_dashboard extends external_api {
     $api_key = get_config('mad2api', 'api_key');
 
     $count_sql = "
-      SELECT  COUNT(*)$organization = get_config('mad2api', 'organization');ignments B
+      SELECT  COUNT(*) FROM mdl_role_assignments B
       JOIN mdl_course mc on mc.id = m.courseid
       JOIN mdl_user mu on mu.id = m.userid
       WHERE B.roleid = 5 AND m.courseid = {$course_id} AND B.userid = m.userid
