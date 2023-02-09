@@ -349,12 +349,19 @@ class mad_dashboard extends external_api {
     global $DB;
 
     $students = $DB->get_records_sql("
-      SELECT u.id, u.firstname, u.lastname, u.email
+      SELECT u.id, u.firstname, u.lastname, u.email,
+      (CASE WHEN lastaccess = '0' THEN 'false' ELSE 'true' END) as logged_in,
+      AVG(g.rawgrade) as current_grade
       FROM {course} c
       JOIN {context} ct ON c.id = ct.instanceid
       JOIN {role_assignments} ra ON ra.contextid = ct.id
       JOIN {user} u ON u.id = ra.userid
       JOIN {role} r ON r.id = ra.roleid
+      LEFT JOIN {grade_grades} g ON g.userid = ra.userid AND g.itemid IN (
+        SELECT gi.id
+        FROM {grade_items} gi
+        WHERE gi.courseid = {$course_id}
+      )
       WHERE c.id = {$course_id} AND r.id = 5
       GROUP BY u.id
       LIMIT {$per_page} OFFSET {$offset}
