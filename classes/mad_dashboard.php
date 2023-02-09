@@ -1,9 +1,9 @@
 <?php
 namespace block_mad2api;
-//use helpers\S3;
 defined('MOODLE_INTERNAL') || die();
 
 require_once("$CFG->libdir/externallib.php");
+require_once('task/mad_send_logs.php');
 
 use external_api;
 use external_function_parameters;
@@ -26,7 +26,8 @@ class mad_dashboard extends external_api {
       new external_single_structure(
         array(
           'enabled' => new external_value(PARAM_BOOL, VALUE_DEFAULT, true),
-          'url' => new external_value(PARAM_TEXT, VALUE_DEFAULT, "")
+          'url' => new external_value(PARAM_TEXT, VALUE_DEFAULT, ""),
+          'error' => new external_value(PARAM_BOOL, VALUE_DEFAULT, false)
         )
       )
     );
@@ -37,40 +38,39 @@ class mad_dashboard extends external_api {
     global $DB, $USER, $COURSE;
 
     $params = self::validate_parameters(self::enable_parameters(),
-       array(
-         'courseId' => $courseId,
-       )
-     );
+      array(
+        'courseId' => $courseId,
+      )
+    );
 
     $dashboard_setting = $DB->get_record(
-       "mad2api_dashboard_settings",
-       array('user_id' => $USER->id, 'course_id' => $courseId)
-     );
+      "mad2api_dashboard_settings",
+      array('user_id' => $USER->id, 'course_id' => $courseId)
+    );
 
     if (isset($dashboard_setting) && $dashboard_setting->is_enabled == 1) {
       $response = self::api_dashboard_auth_url($params['courseId']);
 
-      if (!property_exists($response, 'url')) {
-        #TODO should return a string to pop up and error
-        return;
+      if (!$response || !property_exists($response, 'url')) {
+        return array(['enabled' => false, 'url' => '', 'error' => true]);
       }
 
-      return array(['enabled' => true, 'url' => $response["url"]]);
+      if (property_exists($response, 'url')) {
+        return array(['enabled' => true, 'url' => $response->url, 'error' => false]);
+      }
     }
 
     $database_response = false;
     $response = self::api_enable_call($params['courseId']);
 
     if (!property_exists($response, 'url')) {
-      #TODO should return a string to pop up and error
-      return;
+      return array(['enabled' => false, 'url' => '', 'error' => true]);
     }
 
-    $record = array(
+    $record_dashboard_settings = array(
       'user_id' => $USER->id,
       'created_at' => date('Y-m-d H:i:s'),
       'updated_at' => date('Y-m-d H:i:s'),
-      'last_log_date' => date('Y-m-d'),
       'course_id' => intval($params['courseId']),
       'is_enabled' => 1,
       'token' => $USER->email,
@@ -78,14 +78,22 @@ class mad_dashboard extends external_api {
 
     if (isset($dashboard_setting->id)) {
       $record['id'] = $dashboard_setting->id;
-      $database_response = $DB->update_record('mad2api_dashboard_settings', $record, false);
+
+      $database_response = $DB->update_record('mad2api_dashboard_settings', $record_dashboard_settings, false);
     } else {
-      $database_response = $DB->insert_record('mad2api_dashboard_settings', $record, false);
+      $database_response = $DB->insert_record('mad2api_dashboard_settings', $record_dashboard_settings, false);
+
+      $record_course_logs = array(
+        'created_at' => date('Y-m-d H:i:s'),
+        'updated_at' => date('Y-m-d H:i:s'),
+        'course_id'  => intval($params['courseId']),
+        'status'     => 'todo'
+      );
+
+      $DB->insert_record('mad2api_course_logs', $record_course_logs, false);
     }
 
-    self::upload_logs($params['courseId']);
-
-    return array(['enabled' => $database_response, 'url' => $response["url"]]);
+    return array(['enabled' => $database_response, 'url' => $response->url, 'error' => false ]);
   }
 
   public static function disable_parameters() {
@@ -106,7 +114,7 @@ class mad_dashboard extends external_api {
 
   public static function disable($courseId)
   {
-    global $USER, $DB;
+   global $USER, $DB;
 
     $params = self::validate_parameters(self::enable_parameters(),
       array(
@@ -161,36 +169,136 @@ class mad_dashboard extends external_api {
     $access_key = get_config('mad2api', 'access_key');
     $aws_secret_key = get_config('mad2api', 'aws_secret_key');
     $api_key = get_config('mad2api', 'api_key');
-
     $organization = get_config('mad2api', 'organization');
+
     $data = array(
-      'class_code' => $courseId,
+      'course' => array(
+        'id' => $COURSE->id,
+        'fullname' => $COURSE->fullname,
+        'startdate' => $COURSE->startdate,
+        'enddate' => $COURSE->enddate
+      ),
       'organization' => $organization,
       'teacher' => array(
         'id' => $USER->id,
         'firstname' => $USER->firstname,
         'lastname' => $USER->lastname,
         'email' => $USER->email
-      ),
-      'students' => self::get_course_students($courseId)
+      )
     );
 
     $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL,"http://host.docker.internal:8080/api/plugin/enable");
+
+    curl_setopt($ch, CURLOPT_URL,"api.lanse.prd.apps.kloud.rnp.br/api/plugin/enable");
     curl_setopt($ch, CURLOPT_POST, 1);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));  //Post Fields
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
     $headers = [
       'accept: application/json',
       'Content-Type: application/json',
-      "API-KEY: {$api_key}",
-
+      "API-KEY: {$api_key}"
     ];
+
     curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
     $server_output = curl_exec($ch);
+
     curl_close($ch);
 
     return json_decode($server_output);
+  }
+
+  public static function api_send_students($course_id) {
+    global $DB;
+
+    $api_key = get_config('mad2api', 'api_key');
+    $count = self::get_course_students_count($course_id);
+    $per_page = 20;
+    $end_page = $count / $per_page;
+
+    for ($current_page = 1; $current_page <= $end_page; $current_page++) {
+      $offset = ($current_page - 1) * $per_page;
+
+      $data = array(
+        'course_id' => $course_id,
+        'students' => self::get_course_students($course_id, $per_page, $offset)
+      );
+      $headers = array(
+        'accept: application/json',
+        'Content-Type: application/json',
+        "API-KEY: {$api_key}"
+      );
+
+      $ch = curl_init();
+
+      curl_setopt($ch, CURLOPT_URL,"api.lanse.prd.apps.kloud.rnp.br/api/plugin/courses/{$course_id}/students");
+      curl_setopt($ch, CURLOPT_POST, 1);
+      curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));  //Post Fields
+      curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+      curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+      $server_output = curl_exec($ch);
+
+      curl_close($ch);
+    }
+  }
+
+  public static function api_send_logs($course_id) {
+    global $DB;
+
+    $api_key = get_config('mad2api', 'api_key');
+
+    $count_sql = "
+      SELECT  COUNT(*)
+      FROM mdl_logstore_standard_log m
+      JOIN mdl_role_assignments B
+      JOIN mdl_course mc on mc.id = m.courseid
+      JOIN mdl_user mu on mu.id = m.userid
+      WHERE B.roleid = 5 AND m.courseid = {$course_id} AND B.userid = m.userid
+    ";
+    $count = $DB->count_records_sql($count_sql);
+    $per_page = 20;
+    $end_page = $count / $per_page;
+
+    for ($current_page = 1; $current_page <= $end_page; $current_page++) {
+      $offset = ($current_page - 1) * $per_page;
+      $logs_query = "
+        SELECT  m.id AS id,
+                FROM_UNIXTIME(m.timecreated) AS hour,
+                CONCAT(mu.firstname, ' ',mu.lastname) AS name,
+                m.eventname AS context,
+                m.component AS component
+        FROM mdl_logstore_standard_log m
+        JOIN mdl_role_assignments B
+        JOIN mdl_course mc on mc.id = m.courseid
+        JOIN mdl_user mu on mu.id = m.userid
+        WHERE B.roleid = 5 AND m.courseid = {$course_id} AND B.userid = m.userid
+        GROUP BY m.id
+        LIMIT {$per_page} OFFSET {$offset}
+      ";
+      $data = array(
+        'course_id' => $course_id,
+        'logs' => $DB->get_records_sql($logs_query)
+      );
+      $headers = array(
+        'accept: application/json',
+        'Content-Type: application/json',
+        "API-KEY: {$api_key}"
+      );
+
+      $ch = curl_init();
+
+      curl_setopt($ch, CURLOPT_URL,"api.lanse.prd.apps.kloud.rnp.br/api/plugin/courses/{$course_id}/logs");
+      curl_setopt($ch, CURLOPT_POST, 1);
+      curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));  //Post Fields
+      curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+      curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+      $server_output = curl_exec($ch);
+
+      curl_close($ch);
+    }
   }
 
   public static function api_dashboard_auth_url($courseId){
@@ -199,43 +307,35 @@ class mad_dashboard extends external_api {
     $api_key = get_config('mad2api', 'api_key');
 
     $data = array(
-      'class_code' => $courseId,
-      "code_id" => $USER->email,
+      'class_code' => "{$courseId}",
+      'code_id' => $USER->id,
     );
-
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL,"http://host.docker.internal:8080/api/plugin/enabled");
-    curl_setopt($ch, CURLOPT_POST, 1);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));  //Post Fields
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     $headers = [
       'accept: application/json',
       'Content-Type: application/json',
-      "API-KEY: {$api_key}",
-
+      "API-KEY: {$api_key}"
     ];
+
+    $ch = curl_init();
+
+    curl_setopt($ch, CURLOPT_URL,"api.lanse.prd.apps.kloud.rnp.br/api/plugin/enabled");
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));  //Post Fields
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
     $server_output = curl_exec($ch);
+
     curl_close($ch);
 
     return json_decode($server_output);
   }
 
-  public static function get_last_log_date()
-  {
-    global $DB, $COURSE;
-    return $DB->get_records_sql("
-      SELECT last_log_date
-      FROM mdl_mad2api_dashboard_settings
-      WHERE course_id = $COURSE->id"
-    );
-  }
-
-  function get_course_students($courseId) {
+  public static function get_course_students_count($courseId) {
     global $DB;
 
-    return $DB->get_records_sql("
-      SELECT u.firstname, u.lastname, u.id, u.email
+    return $DB->count_records_sql("
+      SELECT  COUNT(*)
       FROM {course} c
       JOIN {context} ct ON c.id = ct.instanceid
       JOIN {role_assignments} ra ON ra.contextid = ct.id
@@ -245,106 +345,28 @@ class mad_dashboard extends external_api {
     ");
   }
 
-  public static function get_course_start_end_date()
-  {
-    global $DB, $COURSE;
-    return $DB->get_records_sql("
-      SELECT FROM_UNIXTIME(startdate, '%d/%m/%Y') AS startdate, FROM_UNIXTIME(enddate, '%d/%m/%Y') AS enddate
-      FROM mdl_course
-      WHERE id = $COURSE->id"
-    );
-  }
+  public static function get_course_students($course_id, $per_page, $offset) {
+    global $DB;
 
-  public static function upload_logs($courseId)
-  {
-    global $DB, $COURSE, $CFG, $USER;
-
-    require_once('helpers/S3.php');
-
-    $access_key = get_config('mad2api', 'access_key');
-    $aws_secret_key = get_config('mad2api', 'aws_secret_key');
-    $organization = get_config('mad2api', 'organization');
-
-    $course_settings = $DB->get_record("mad2api_dashboard_settings", ['user_id' => $USER->id, 'course_id' => $courseId]);
-
-    $s3 = new \S3($access_key, $aws_secret_key, false,  "host.docker.internal:4566");
-
-    // echo "S3::listBuckets(): ".print_r($s3->listBuckets(), 1)."\n";
-    // return;
-    $logs_query = '
-    SELECT  m.id AS Id,
-            FROM_UNIXTIME(m.timecreated) AS "Hora",
-            CONCAT(mu.firstname, " ",mu.lastname) AS "Nome completo",
-            m.eventname AS "Contexto do Evento"
-    FROM mdl_logstore_standard_log m
-    JOIN mdl_role_assignments B
-    JOIN mdl_course mc on mc.id = m.courseid
-    JOIN mdl_user mu on mu.id = m.userid
-    WHERE B.roleid = 5 AND m.courseid = 8 AND B.userid = m.userid
-    GROUP BY m.id
-    ';
-    $logs = $DB->get_records_sql($logs_query);
-
-    $logs = array_values($logs);
-
-    if(!function_exists('str_putcsv'))
-    {
-        function str_putcsv($inputs, $delimiter = ',', $enclosure = '"')
-        {
-            $header = array(
-              0 => 'Id',
-              1 => 'Hora',
-              2 => 'Nome Completo',
-              3 => 'Contexto do Evento',
-            );
-            $fp = fopen('temp.csv', 'w');
-            fputcsv($fp, $header);
-            foreach ($inputs as $input) {
-              fputcsv($fp, get_object_vars($input));
-            }
-            fclose($fp);
-        }
-     }
-    str_putcsv($logs);
-    $s3->putObject(
-      file_get_contents('./temp.csv'),
-      'moodlelogs-gt',
-      "unprocessed/$organization/$course_settings->token/$courseId.csv",
-      \S3::ACL_PRIVATE,
-      array(),
-      array(
-        'Content-Type' => 'text/csv'
-
+    $students = $DB->get_records_sql("
+      SELECT u.id, u.firstname, u.lastname, u.email,
+      (CASE WHEN lastaccess = '0' THEN 'false' ELSE 'true' END) as logged_in,
+      AVG(g.rawgrade) as current_grade
+      FROM {course} c
+      JOIN {context} ct ON c.id = ct.instanceid
+      JOIN {role_assignments} ra ON ra.contextid = ct.id
+      JOIN {user} u ON u.id = ra.userid
+      JOIN {role} r ON r.id = ra.roleid
+      LEFT JOIN {grade_grades} g ON g.userid = ra.userid AND g.itemid IN (
+        SELECT gi.id
+        FROM {grade_items} gi
+        WHERE gi.courseid = {$course_id}
       )
-    );
-  }
+      WHERE c.id = {$course_id} AND r.id = 5
+      GROUP BY u.id
+      LIMIT {$per_page} OFFSET {$offset}
+    ");
 
-  public static function get_dashboard_status($courseId)
-  {
-    global $USER, $DB;
-
-    return $DB->get_record(
-      "mad2api_dashboard_settings",
-      array(
-        'user_id' => $USER->id,
-        'course_id' => $courseId,
-        'is_enabled' => 1
-      )
-    );
-  }
-
-  public static function scheduled_log(){
-    global $DB, $COURSE;
-
-    $query = "
-      SELECT course_id
-      FROM `mdl_mad2api_dashboard_settings`
-      WHERE is_enabled = 1;
-    ";
-    $active_courses = $DB->get_records_sql($query);
-
-    foreach($active_courses as $active_course){
-      self::upload_logs($active_course->course_id);
-    }
+    return $students;
   }
 }
