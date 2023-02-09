@@ -58,19 +58,19 @@ class block_mad2api extends block_base {
             $this->content->text =
                 '<div class="plugin-link-container">
                     <div>
-                        <a id="access-dashboard" class="access-dashboard-button" href="'. $url .'" target="_blank">Acessar Dashboard</a>
+                        <a id="access-dashboard" class="access-dashboard-button" href="'. $url .'" target="_blank">'. get_string('access_dashboard', 'block_mad2api') .'</a>
                     </div>
-                    <a id="enable-settings" class="plugin-link disabled" href="">Habilitar Dashboard</a>
-                    <a id="disable-settings" class="plugin-link" href="">Desabilitar Dashboard</a>
+                    <a id="enable-settings" class="plugin-link disabled" href="">'. get_string('enable_dashboard', 'block_mad2api') .'</a>
+                    <a id="disable-settings" class="plugin-link" href="">'. get_string('disable_dashboard', 'block_mad2api') .'</a>
                 </div>';
         } else {
             $this->content->text =
                 '<div class="plugin-link-container">
                     <div>
-                        <a id="access-dashboard" class="access-dashboard-button disabled" href="" target="_blank">Acessar Dashboard</a>
+                        <a id="access-dashboard" class="access-dashboard-button disabled" href="" target="_blank">'. get_string('access_dashboard', 'block_mad2api') .'</a>
                     </div>
-                    <a id="enable-settings" class="plugin-link" href="">Habilitar Dashboard</a>
-                    <a id="disable-settings" class="plugin-link disabled" href="">Desabilitar Dashboard</a>
+                    <a id="enable-settings" class="plugin-link" href="">'. get_string('enable_dashboard', 'block_mad2api') .'</a>
+                    <a id="disable-settings" class="plugin-link disabled" href="">'. get_string('disable_dashboard', 'block_mad2api') .'</a>
                 </div>';
         }
 
