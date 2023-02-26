@@ -23,7 +23,7 @@
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-$string['blockstring'] = 'Texto do plugin';
+$string['apiurl'] = 'URL da API';
 $string['descconfig'] = 'Descrição da seção de configuração';
 $string['descfoo'] = 'Descrição de configuração';
 $string['headerconfig'] = 'Cabeçalho da seção de configuração';

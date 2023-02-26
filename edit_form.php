@@ -1,16 +1,13 @@
 <?php
 
 class block_mad2api_edit_form extends block_edit_form {
+	protected function specific_definition($mform) {
+		// Section header title according to language file.
+		// $mform->addElement('header', 'configheader', get_string('blocksettings', 'block'));
 
-    protected function specific_definition($mform) {
-
-        // Section header title according to language file.
-        $mform->addElement('header', 'configheader', get_string('blocksettings', 'block'));
-
-        // A sample string variable with a default value.
-        $mform->addElement('text', 'config_text', get_string('blockstring', 'block_mad2api'));
-        $mform->setDefault('config_text', 'default value');
-        $mform->setType('config_text', PARAM_TEXT);
-
-    }
+		// // It set's the API url that plugin will send data.
+		// $mform->addElement('text', 'api_url', get_string('apiurl', 'block_mad2api'));
+		// $mform->setDefault('api_url', 'http://api.lanse.prd.apps.kloud.rnp.br/');
+		// $mform->setType('api_url', PARAM_TEXT);
+	}
 }
