@@ -19,6 +19,8 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/modal_factory', 'core/
           promise.done(response => {
             const body = response[0];
 
+            console.log(body);
+
             if (body.error) {
               str.get_strings([
                 { key: 'error_modal_title', component: 'block_mad2api' },

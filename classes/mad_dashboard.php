@@ -35,7 +35,7 @@ class mad_dashboard extends external_api {
 
   public static function enable($courseId)
   {
-    global $DB, $USER, $COURSE;
+    global $DB, $USER;
 
     $params = self::validate_parameters(self::enable_parameters(),
       array(
@@ -77,7 +77,7 @@ class mad_dashboard extends external_api {
     );
 
     if (isset($dashboard_setting->id)) {
-      $record['id'] = $dashboard_setting->id;
+      $record_dashboard_settings['id'] = $dashboard_setting->id;
 
       $database_response = $DB->update_record('mad2api_dashboard_settings', $record_dashboard_settings, false);
     } else {
@@ -173,7 +173,7 @@ class mad_dashboard extends external_api {
 
     $data = array(
       'course' => array(
-        'id' => $COURSE->id,
+        'id' => $courseId,
         'fullname' => $COURSE->fullname,
         'startdate' => $COURSE->startdate,
         'enddate' => $COURSE->enddate
@@ -244,7 +244,7 @@ class mad_dashboard extends external_api {
     }
   }
 
-  public static function api_send_logs($course_id) {
+  public static function api_send_logs($courseId) {
     global $DB;
 
     $api_key = get_config('mad2api', 'api_key');
@@ -255,7 +255,7 @@ class mad_dashboard extends external_api {
       JOIN mdl_role_assignments B
       JOIN mdl_course mc on mc.id = m.courseid
       JOIN mdl_user mu on mu.id = m.userid
-      WHERE B.roleid = 5 AND m.courseid = {$course_id} AND B.userid = m.userid
+      WHERE B.roleid = 5 AND m.courseid = {$courseId} AND B.userid = m.userid
     ";
     $count = $DB->count_records_sql($count_sql);
     $per_page = 20;
@@ -273,12 +273,12 @@ class mad_dashboard extends external_api {
         JOIN mdl_role_assignments B
         JOIN mdl_course mc on mc.id = m.courseid
         JOIN mdl_user mu on mu.id = m.userid
-        WHERE B.roleid = 5 AND m.courseid = {$course_id} AND B.userid = m.userid
+        WHERE B.roleid = 5 AND m.courseid = {$courseId} AND B.userid = m.userid
         GROUP BY m.id
         LIMIT {$per_page} OFFSET {$offset}
       ";
       $data = array(
-        'course_id' => $course_id,
+        'course_id' => $courseId,
         'logs' => $DB->get_records_sql($logs_query)
       );
       $headers = array(
@@ -302,7 +302,7 @@ class mad_dashboard extends external_api {
   }
 
   public static function api_dashboard_auth_url($courseId){
-    global $COURSE, $USER, $DB;
+    global $USER, $DB;
 
     $api_key = get_config('mad2api', 'api_key');
 
@@ -345,7 +345,7 @@ class mad_dashboard extends external_api {
     ");
   }
 
-  public static function get_course_students($course_id, $per_page, $offset) {
+  public static function get_course_students($courseId, $perPage, $offset) {
     global $DB;
 
     $students = $DB->get_records_sql("
@@ -360,11 +360,11 @@ class mad_dashboard extends external_api {
       LEFT JOIN {grade_grades} g ON g.userid = ra.userid AND g.itemid IN (
         SELECT gi.id
         FROM {grade_items} gi
-        WHERE gi.courseid = {$course_id}
+        WHERE gi.courseid = {$courseId}
       )
-      WHERE c.id = {$course_id} AND r.id = 5
+      WHERE c.id = {$courseId} AND r.id = 5
       GROUP BY u.id
-      LIMIT {$per_page} OFFSET {$offset}
+      LIMIT {$perPage} OFFSET {$offset}
     ");
 
     return $students;
