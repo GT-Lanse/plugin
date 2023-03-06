@@ -1,0 +1,8 @@
+{
+  "name": "puglin",
+  "devDependencies": {
+    "grunt": "^1.6.1",
+    "grunt-contrib-uglify": "^5.2.2",
+    "grunt-load-gruntfile": "^0.0.2"
+  }
+}
