@@ -289,7 +289,7 @@ class mad_dashboard extends external_api {
 
       $ch = curl_init();
 
-      curl_setopt($ch, CURLOPT_URL, self::get_url_for("api/plugin/courses/{$course_id}/logs"));
+      curl_setopt($ch, CURLOPT_URL, self::get_url_for("api/plugin/courses/{$courseId}/logs"));
       curl_setopt($ch, CURLOPT_POST, 1);
       curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));  //Post Fields
       curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
