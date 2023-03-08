@@ -26,71 +26,72 @@ defined('MOODLE_INTERNAL') || die();
 require_once('classes/mad_dashboard.php');
 
 class block_mad2api extends block_base {
-    function init() {
-        $this->title = get_string('pluginname', 'block_mad2api');
+  function init() {
+    $this->title = get_string('pluginname', 'block_mad2api');
+  }
+
+  function get_content() {
+    global $CFG, $OUTPUT, $PAGE, $COURSE, $USER, $DB;
+
+    $context = context_course::instance($COURSE->id);
+
+    if (!\block_mad2api\mad_dashboard::is_current_user_course_teacher($context->id)) {
+      return null;
     }
 
-    function get_content() {
-        global $CFG, $OUTPUT, $PAGE, $COURSE, $USER, $DB;
-
-        $context = context_course::instance($COURSE->id);
-
-        if (!\block_mad2api\mad_dashboard::is_current_user_course_teacher($context->id)) {
-            return null;
-        }
-
-        if ($this->content !== null) {
-            return $this->content;
-        }
-
-        $this->content = new stdClass();
-        $enabled = $DB->get_record(
-            "mad2api_dashboard_settings",
-            array( 'user_id' => $USER->id, 'course_id' => $COURSE->id, 'is_enabled' => 1)
-        );
-
-        $PAGE->requires->js_call_amd('block_mad2api/enable_button_api_call', 'init', array($COURSE->id));
-
-        if ($enabled) {
-            $course_info = \block_mad2api\mad_dashboard::enable($COURSE->id);
-            $url = $course_info[0]['url'];
-
-            $this->content->text =
-                '<div class="plugin-link-container">
-                    <div>
-                        <a id="access-dashboard" class="access-dashboard-button" href="'. $url .'" target="_blank">'. get_string('access_dashboard', 'block_mad2api') .'</a>
-                    </div>
-                    <a id="enable-settings" class="plugin-link disabled" href="">'. get_string('enable_dashboard', 'block_mad2api') .'</a>
-                    <a id="disable-settings" class="plugin-link" href="">'. get_string('disable_dashboard', 'block_mad2api') .'</a>
-                </div>';
-        } else {
-            $this->content->text =
-                '<div class="plugin-link-container">
-                    <div>
-                        <a id="access-dashboard" class="access-dashboard-button disabled" href="" target="_blank">'. get_string('access_dashboard', 'block_mad2api') .'</a>
-                    </div>
-                    <a id="enable-settings" class="plugin-link" href="">'. get_string('enable_dashboard', 'block_mad2api') .'</a>
-                    <a id="disable-settings" class="plugin-link disabled" href="">'. get_string('disable_dashboard', 'block_mad2api') .'</a>
-                </div>';
-        }
-
-        return $this->content;
+    if ($this->content !== null) {
+      return $this->content;
     }
 
-    // my moodle can only have SITEID and it's redundant here, so take it away
-    public function applicable_formats() {
-        return array('all' => false,
-                     'site' => true,
-                     'site-index' => true,
-                     'course-view' => true,
-                     'course-view-social' => false,
-                     'mod' => true,
-                     'mod-quiz' => false);
+    $this->content = new stdClass();
+    $enabled = $DB->get_record(
+      "mad2api_dashboard_settings",
+      array( 'user_id' => $USER->id, 'course_id' => $COURSE->id, 'is_enabled' => 1)
+    );
+
+    $PAGE->requires->js_call_amd('block_mad2api/enable_button_api_call', 'init', array($COURSE->id));
+
+    if ($enabled) {
+      $courseInfo = \block_mad2api\mad_dashboard::enable($COURSE->id);
+      $url = $courseInfo[0]['url'];
+
+      $this->content->text =
+        '<div class="plugin-link-container">
+          <div>
+            <a id="access-dashboard" class="access-dashboard-button" href="'. $url .'" target="_blank">'. get_string('access_dashboard', 'block_mad2api') .'</a>
+          </div>
+          <a id="enable-settings" class="plugin-link disabled" href="">'. get_string('enable_dashboard', 'block_mad2api') .'</a>
+          <a id="disable-settings" class="plugin-link" href="">'. get_string('disable_dashboard', 'block_mad2api') .'</a>
+        </div>';
+    } else {
+      $this->content->text =
+        '<div class="plugin-link-container">
+          <div>
+            <a id="access-dashboard" class="access-dashboard-button disabled" href="" target="_blank">'. get_string('access_dashboard', 'block_mad2api') .'</a>
+          </div>
+          <a id="enable-settings" class="plugin-link" href="">'. get_string('enable_dashboard', 'block_mad2api') .'</a>
+          <a id="disable-settings" class="plugin-link disabled" href="">'. get_string('disable_dashboard', 'block_mad2api') .'</a>
+        </div>';
     }
 
-    public function instance_allow_multiple() {
-          return true;
-    }
+    return $this->content;
+  }
 
-    function has_config() {return true;}
+  public function applicable_formats() {
+    return array(
+      'all' => false,
+      'site' => true,
+      'site-index' => true,
+      'course-view' => true,
+      'course-view-social' => false,
+      'mod' => true,
+      'mod-quiz' => false
+    );
+  }
+
+  public function instance_allow_multiple() {
+    return true;
+  }
+
+  function has_config() { return true; }
 }

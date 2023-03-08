@@ -42,13 +42,3 @@ $settings->add(new admin_setting_configtext('mad2api/api_key',
                                               'Chave API KEY Plugin',
                                               '',
                                               null));
-
-$settings->add(new admin_setting_configtext('mad2api/access_key',
-                                              'AWS Access Key',
-                                              '',
-                                              null));
-
-$settings->add(new admin_setting_configtext('mad2api/aws_secret_key',
-                                              'AWS Secret Key',
-                                              '',
-                                              null));

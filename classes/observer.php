@@ -42,22 +42,22 @@ class block_mad2api_observer {
         global $DB;
 
         $ch = curl_init();
-        $api_url = get_config('mad2api', 'api_url');
-        $url = "{$api_url}/api/plugin/courses/{$event->courseid}/events";
-        $api_key = get_config('mad2api', 'api_key');
-        $related_user = $DB->get_record('user', array('id' => $event->relateduserid));
+        $apiUrl = get_config('mad2api', 'api_url');
+        $url = "{$apiUrl}/api/plugin/courses/{$event->courseid}/events";
+        $apiKey = get_config('mad2api', 'api_key');
+        $relatedUser = $DB->get_record('user', array('id' => $event->relateduserid));
         $user = $DB->get_record('user', array('id' => $event->userid));
         $data = array(
           'event_name' => end(explode("\\", $event->eventname)),
           'course_id' => $event->courseid,
-          'related_user' => $related_user,
+          'related_user' => $relatedUser,
           'user' => $user,
           'other' => $event->other
         );
         $headers = [
           'accept: application/json',
           'Content-Type: application/json',
-          "API-KEY: {$api_key}"
+          "API-KEY: {$apiKey}"
         ];
 
         curl_setopt($ch, CURLOPT_URL, $url);
