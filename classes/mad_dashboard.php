@@ -43,12 +43,12 @@ class mad_dashboard extends external_api {
       )
     );
 
-    $dashboard_setting = $DB->get_record(
+    $dashboardSetting = $DB->get_record(
       "mad2api_dashboard_settings",
       array('user_id' => $USER->id, 'course_id' => $courseId)
     );
 
-    if (isset($dashboard_setting) && $dashboard_setting->is_enabled == 1) {
+    if (isset($dashboardSetting) && $dashboardSetting->is_enabled == 1) {
       $response = self::api_dashboard_auth_url($params['courseId']);
 
       if (!$response || !property_exists($response, 'url')) {
@@ -60,14 +60,14 @@ class mad_dashboard extends external_api {
       }
     }
 
-    $database_response = false;
+    $databaseResponse = false;
     $response = self::api_enable_call($params['courseId']);
 
     if (!property_exists($response, 'url')) {
       return array(['enabled' => false, 'url' => '', 'error' => true]);
     }
 
-    $record_dashboard_settings = array(
+    $recordDashboardSettings = array(
       'user_id' => $USER->id,
       'created_at' => date('Y-m-d H:i:s'),
       'updated_at' => date('Y-m-d H:i:s'),
@@ -76,24 +76,24 @@ class mad_dashboard extends external_api {
       'token' => $USER->email,
     );
 
-    if (isset($dashboard_setting->id)) {
-      $record_dashboard_settings['id'] = $dashboard_setting->id;
+    if (isset($dashboardSetting->id)) {
+      $recordDashboardSettings['id'] = $dashboardSetting->id;
 
-      $database_response = $DB->update_record('mad2api_dashboard_settings', $record_dashboard_settings, false);
+      $databaseResponse = $DB->update_record('mad2api_dashboard_settings', $recordDashboardSettings, false);
     } else {
-      $database_response = $DB->insert_record('mad2api_dashboard_settings', $record_dashboard_settings, false);
+      $databaseResponse = $DB->insert_record('mad2api_dashboard_settings', $recordDashboardSettings, false);
 
-      $record_course_logs = array(
+      $recordCourseLogs = array(
         'created_at' => date('Y-m-d H:i:s'),
         'updated_at' => date('Y-m-d H:i:s'),
         'course_id'  => intval($params['courseId']),
         'status'     => 'todo'
       );
 
-      $DB->insert_record('mad2api_course_logs', $record_course_logs, false);
+      $DB->insert_record('mad2api_course_logs', $recordCourseLogs, false);
     }
 
-    return array(['enabled' => $database_response, 'url' => $response->url, 'error' => false ]);
+    return array(['enabled' => $databaseResponse, 'url' => $response->url, 'error' => false ]);
   }
 
   public static function disable_parameters() {
@@ -129,18 +129,18 @@ class mad_dashboard extends external_api {
       'is_enabled' => 0
     );
 
-    $database_response = false;
-    $dashboard_setting = $DB->get_record(
+    $databaseResponse = false;
+    $dashboardSetting = $DB->get_record(
       "mad2api_dashboard_settings",
       ['user_id' => $USER->id, 'course_id' => $courseId]
     );
 
-    if (isset($dashboard_setting->id)) {
-      $data['id'] = $dashboard_setting->id;
-      $database_response = $DB->update_record('mad2api_dashboard_settings', $data);
+    if (isset($dashboardSetting->id)) {
+      $data['id'] = $dashboardSetting->id;
+      $databaseResponse = $DB->update_record('mad2api_dashboard_settings', $data);
     }
 
-    return array(['disabled' => $database_response]);
+    return array(['disabled' => $databaseResponse]);
   }
 
   public static function is_current_user_course_teacher($contextid) {
@@ -166,9 +166,7 @@ class mad_dashboard extends external_api {
   public static function api_enable_call($courseId){
     global $COURSE, $USER, $DB;
 
-    $access_key = get_config('mad2api', 'access_key');
-    $aws_secret_key = get_config('mad2api', 'aws_secret_key');
-    $api_key = get_config('mad2api', 'api_key');
+    $apiKey = get_config('mad2api', 'api_key');
     $organization = get_config('mad2api', 'organization');
 
     $data = array(
@@ -197,48 +195,48 @@ class mad_dashboard extends external_api {
     $headers = [
       'accept: application/json',
       'Content-Type: application/json',
-      "API-KEY: {$api_key}"
+      "API-KEY: {$apiKey}"
     ];
 
     curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
-    $server_output = curl_exec($ch);
+    $serverOutput = curl_exec($ch);
 
     curl_close($ch);
 
-    return json_decode($server_output);
+    return json_decode($serverOutput);
   }
 
-  public static function api_send_students($course_id) {
+  public static function api_send_students($courseId) {
     global $DB;
 
-    $api_key = get_config('mad2api', 'api_key');
-    $count = self::get_course_students_count($course_id);
-    $per_page = 20;
-    $end_page = $count / $per_page;
+    $apiKey = get_config('mad2api', 'api_key');
+    $count = self::get_course_students_count($courseId);
+    $perPage = 20;
+    $endPage = $count / $perPage;
 
-    for ($current_page = 1; $current_page <= $end_page; $current_page++) {
-      $offset = ($current_page - 1) * $per_page;
+    for ($currentPage = 1; $currentPage <= $endPage; $currentPage++) {
+      $offset = ($currentPage - 1) * $perPage;
 
       $data = array(
-        'course_id' => $course_id,
-        'students' => self::get_course_students($course_id, $per_page, $offset)
+        'course_id' => $courseId,
+        'students' => self::get_course_students($courseId, $perPage, $offset)
       );
       $headers = array(
         'accept: application/json',
         'Content-Type: application/json',
-        "API-KEY: {$api_key}"
+        "API-KEY: {$apiKey}"
       );
 
       $ch = curl_init();
 
-      curl_setopt($ch, CURLOPT_URL, self::get_url_for("api/plugin/courses/{$course_id}/students"));
+      curl_setopt($ch, CURLOPT_URL, self::get_url_for("api/plugin/courses/{$courseId}/students"));
       curl_setopt($ch, CURLOPT_POST, 1);
       curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));  //Post Fields
       curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
       curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
-      $server_output = curl_exec($ch);
+      $serverOutput = curl_exec($ch);
 
       curl_close($ch);
     }
@@ -247,9 +245,9 @@ class mad_dashboard extends external_api {
   public static function api_send_logs($courseId) {
     global $DB;
 
-    $api_key = get_config('mad2api', 'api_key');
+    $apiKey = get_config('mad2api', 'api_key');
 
-    $count_sql = "
+    $countSql = "
       SELECT  COUNT(*)
       FROM mdl_logstore_standard_log m
       JOIN mdl_role_assignments B
@@ -257,12 +255,12 @@ class mad_dashboard extends external_api {
       JOIN mdl_user mu on mu.id = m.userid
       WHERE B.roleid = 5 AND m.courseid = {$courseId} AND B.userid = m.userid
     ";
-    $count = $DB->count_records_sql($count_sql);
-    $per_page = 20;
-    $end_page = $count / $per_page;
+    $count = $DB->count_records_sql($countSql);
+    $perPage = 20;
+    $endPage = $count / $perPage;
 
-    for ($current_page = 1; $current_page <= $end_page; $current_page++) {
-      $offset = ($current_page - 1) * $per_page;
+    for ($currentPage = 1; $currentPage <= $endPage; $currentPage++) {
+      $offset = ($currentPage - 1) * $perPage;
       $logs_query = "
         SELECT  m.id AS id,
                 FROM_UNIXTIME(m.timecreated) AS hour,
@@ -275,7 +273,7 @@ class mad_dashboard extends external_api {
         JOIN mdl_user mu on mu.id = m.userid
         WHERE B.roleid = 5 AND m.courseid = {$courseId} AND B.userid = m.userid
         GROUP BY m.id
-        LIMIT {$per_page} OFFSET {$offset}
+        LIMIT {$perPage} OFFSET {$offset}
       ";
       $data = array(
         'course_id' => $courseId,
@@ -284,7 +282,7 @@ class mad_dashboard extends external_api {
       $headers = array(
         'accept: application/json',
         'Content-Type: application/json',
-        "API-KEY: {$api_key}"
+        "API-KEY: {$apiKey}"
       );
 
       $ch = curl_init();
@@ -295,7 +293,7 @@ class mad_dashboard extends external_api {
       curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
       curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
-      $server_output = curl_exec($ch);
+      $serverOutput = curl_exec($ch);
 
       curl_close($ch);
     }
@@ -304,7 +302,7 @@ class mad_dashboard extends external_api {
   public static function api_dashboard_auth_url($courseId){
     global $USER, $DB;
 
-    $api_key = get_config('mad2api', 'api_key');
+    $apiKey = get_config('mad2api', 'api_key');
 
     $data = array(
       'class_code' => "{$courseId}",
@@ -313,7 +311,7 @@ class mad_dashboard extends external_api {
     $headers = [
       'accept: application/json',
       'Content-Type: application/json',
-      "API-KEY: {$api_key}"
+      "API-KEY: {$apiKey}"
     ];
 
     $ch = curl_init();
@@ -324,11 +322,11 @@ class mad_dashboard extends external_api {
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
-    $server_output = curl_exec($ch);
+    $serverOutput = curl_exec($ch);
 
     curl_close($ch);
 
-    return json_decode($server_output);
+    return json_decode($serverOutput);
   }
 
   public static function get_course_students_count($courseId) {
@@ -372,8 +370,8 @@ class mad_dashboard extends external_api {
 
   private static function get_url_for($path)
   {
-    $api_url = get_config('mad2api', 'api_url');
+    $apiUrl = get_config('mad2api', 'api_url');
 
-    return "{$api_url}/{$path}";
+    return "{$apiUrl}/{$path}";
   }
 }
