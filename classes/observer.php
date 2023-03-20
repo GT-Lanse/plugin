@@ -43,7 +43,7 @@ class block_mad2api_observer {
 
         $ch = curl_init();
         $apiUrl = get_config('mad2api', 'api_url');
-        $url = "{$apiUrl}/api/plugin/courses/{$event->courseid}/events";
+        $url = "{$apiUrl}/api/v2/events/{$event->courseid}";
         $apiKey = get_config('mad2api', 'api_key');
         $relatedUser = $DB->get_record('user', array('id' => $event->relateduserid));
         $user = $DB->get_record('user', array('id' => $event->userid));

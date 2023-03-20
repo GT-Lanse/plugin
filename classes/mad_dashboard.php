@@ -163,33 +163,32 @@ class mad_dashboard extends external_api {
     return $DB->get_records('role_assignments', array('contextid' => $contextid, 'userid' => $userid));
   }
 
-  public static function api_enable_call($courseId){
+  public static function api_enable_call($courseId) {
     global $COURSE, $USER, $DB;
 
     $apiKey = get_config('mad2api', 'api_key');
     $organization = get_config('mad2api', 'organization');
 
-    $data = array(
-      'course' => array(
-        'id' => $courseId,
-        'fullname' => $COURSE->fullname,
-        'startdate' => $COURSE->startdate,
-        'enddate' => $COURSE->enddate
-      ),
-      'organization' => $organization,
-      'teacher' => array(
-        'id' => $USER->id,
-        'firstname' => $USER->firstname,
-        'lastname' => $USER->lastname,
-        'email' => $USER->email
-      )
+    $course = array(
+      'moodleId' => $courseId,
+      'fullname' => $COURSE->fullname,
+      'startdate' => $COURSE->startdate,
+      'enddate' => $COURSE->enddate
     );
+
+    $teacher = array(
+      'id' => $USER->id,
+      'firstname' => $USER->firstname,
+      'lastname' => $USER->lastname,
+      'email' => $USER->email
+    );
+
 
     $ch = curl_init();
 
-    curl_setopt($ch, CURLOPT_URL, self::get_url_for("api/plugin/enable"));
+    curl_setopt($ch, CURLOPT_URL, self::get_url_for("api/v2/courses");
     curl_setopt($ch, CURLOPT_POST, 1);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));  //Post Fields
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($course));  //Post Fields
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
     $headers = [
@@ -199,7 +198,33 @@ class mad_dashboard extends external_api {
     ];
 
     curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    $serverOutput = curl_exec($ch);
 
+    curl_close($ch);
+    $ch = curl_init();
+
+    curl_setopt($ch, CURLOPT_URL, self::get_url_for("api/v2/teachers");
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($teacher));  //Post Fields
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    $serverOutput = curl_exec($ch);
+
+    curl_close($ch);
+
+    $ch = curl_init();
+    $auth = array(
+      'id' => $USER->id,
+      'moodleId' => $courseId
+    );
+
+    curl_setopt($ch, CURLOPT_URL, self::get_url_for("api/v2/authorize");
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($auth));  //Post Fields
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
     $serverOutput = curl_exec($ch);
 
     curl_close($ch);
@@ -230,7 +255,7 @@ class mad_dashboard extends external_api {
 
       $ch = curl_init();
 
-      curl_setopt($ch, CURLOPT_URL, self::get_url_for("api/plugin/courses/{$courseId}/students"));
+      curl_setopt($ch, CURLOPT_URL, self::get_url_for("api/v2/students"));
       curl_setopt($ch, CURLOPT_POST, 1);
       curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));  //Post Fields
       curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -287,7 +312,7 @@ class mad_dashboard extends external_api {
 
       $ch = curl_init();
 
-      curl_setopt($ch, CURLOPT_URL, self::get_url_for("api/plugin/courses/{$courseId}/logs"));
+      curl_setopt($ch, CURLOPT_URL, self::get_url_for("api/v2/courses/{$courseId}/logs"));
       curl_setopt($ch, CURLOPT_POST, 1);
       curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));  //Post Fields
       curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -303,11 +328,6 @@ class mad_dashboard extends external_api {
     global $USER, $DB;
 
     $apiKey = get_config('mad2api', 'api_key');
-
-    $data = array(
-      'class_code' => "{$courseId}",
-      'code_id' => $USER->id,
-    );
     $headers = [
       'accept: application/json',
       'Content-Type: application/json',
@@ -315,10 +335,14 @@ class mad_dashboard extends external_api {
     ];
 
     $ch = curl_init();
+    $auth = array(
+      'id' => $USER->id,
+      'moodleId' => $courseId
+    );
 
-    curl_setopt($ch, CURLOPT_URL, self::get_url_for("api/plugin/enabled"));
+    curl_setopt($ch, CURLOPT_URL, self::get_url_for("api/v2/authorize");
     curl_setopt($ch, CURLOPT_POST, 1);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));  //Post Fields
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($auth));  //Post Fields
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
