@@ -192,7 +192,6 @@ class mad_dashboard extends external_api {
   public static function api_send_students($courseId) {
     global $DB;
 
-    $apiKey = get_config('mad2api', 'api_key');
     $count = self::get_course_students_count($courseId);
     $perPage = 20;
     $endPage = $count / $perPage;
@@ -204,23 +203,8 @@ class mad_dashboard extends external_api {
         'course_id' => $courseId,
         'students' => self::get_course_students($courseId, $perPage, $offset)
       );
-      $headers = array(
-        'accept: application/json',
-        'Content-Type: application/json',
-        "API-KEY: {$apiKey}"
-      );
 
-      $ch = curl_init();
-
-      curl_setopt($ch, CURLOPT_URL, self::get_url_for("api/v2/students"));
-      curl_setopt($ch, CURLOPT_POST, 1);
-      curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));  //Post Fields
-      curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-      curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-
-      $serverOutput = curl_exec($ch);
-
-      curl_close($ch);
+      do_post_request("api/v2/students", $data)
     }
   }
 
