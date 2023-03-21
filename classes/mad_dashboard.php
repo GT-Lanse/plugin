@@ -166,70 +166,27 @@ class mad_dashboard extends external_api {
   public static function api_enable_call($courseId) {
     global $COURSE, $USER, $DB;
 
-    $apiKey = get_config('mad2api', 'api_key');
-    $organization = get_config('mad2api', 'organization');
-
     $course = array(
       'moodleId' => $courseId,
       'fullname' => $COURSE->fullname,
       'startdate' => $COURSE->startdate,
       'enddate' => $COURSE->enddate
     );
-
     $teacher = array(
       'id' => $USER->id,
       'firstname' => $USER->firstname,
       'lastname' => $USER->lastname,
       'email' => $USER->email
     );
-
-
-    $ch = curl_init();
-
-    curl_setopt($ch, CURLOPT_URL, self::get_url_for("api/v2/courses");
-    curl_setopt($ch, CURLOPT_POST, 1);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($course));  //Post Fields
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
-    $headers = [
-      'accept: application/json',
-      'Content-Type: application/json',
-      "API-KEY: {$apiKey}"
-    ];
-
-    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-    $serverOutput = curl_exec($ch);
-
-    curl_close($ch);
-    $ch = curl_init();
-
-    curl_setopt($ch, CURLOPT_URL, self::get_url_for("api/v2/teachers");
-    curl_setopt($ch, CURLOPT_POST, 1);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($teacher));  //Post Fields
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
-    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-    $serverOutput = curl_exec($ch);
-
-    curl_close($ch);
-
-    $ch = curl_init();
     $auth = array(
       'id' => $USER->id,
       'moodleId' => $courseId
     );
 
-    curl_setopt($ch, CURLOPT_URL, self::get_url_for("api/v2/authorize");
-    curl_setopt($ch, CURLOPT_POST, 1);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($auth));  //Post Fields
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    do_post_request("api/v2/courses", $course);
+    do_post_request("api/v2/teachers", $teacher);
 
-    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-    $serverOutput = curl_exec($ch);
-
-    curl_close($ch);
-
-    return json_decode($serverOutput);
+    return json_decode(do_post_request("api/v2/authorize", $auth));
   }
 
   public static function api_send_students($courseId) {
@@ -270,8 +227,6 @@ class mad_dashboard extends external_api {
   public static function api_send_logs($courseId) {
     global $DB;
 
-    $apiKey = get_config('mad2api', 'api_key');
-
     $countSql = "
       SELECT  COUNT(*)
       FROM mdl_logstore_standard_log m
@@ -304,53 +259,20 @@ class mad_dashboard extends external_api {
         'course_id' => $courseId,
         'logs' => $DB->get_records_sql($logs_query)
       );
-      $headers = array(
-        'accept: application/json',
-        'Content-Type: application/json',
-        "API-KEY: {$apiKey}"
-      );
 
-      $ch = curl_init();
-
-      curl_setopt($ch, CURLOPT_URL, self::get_url_for("api/v2/courses/{$courseId}/logs"));
-      curl_setopt($ch, CURLOPT_POST, 1);
-      curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));  //Post Fields
-      curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-      curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-
-      $serverOutput = curl_exec($ch);
-
-      curl_close($ch);
+      do_post_request("api/v2/courses/{$courseId}/logs", $data);
     }
   }
 
   public static function api_dashboard_auth_url($courseId){
     global $USER, $DB;
 
-    $apiKey = get_config('mad2api', 'api_key');
-    $headers = [
-      'accept: application/json',
-      'Content-Type: application/json',
-      "API-KEY: {$apiKey}"
-    ];
-
-    $ch = curl_init();
     $auth = array(
       'id' => $USER->id,
       'moodleId' => $courseId
     );
 
-    curl_setopt($ch, CURLOPT_URL, self::get_url_for("api/v2/authorize");
-    curl_setopt($ch, CURLOPT_POST, 1);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($auth));  //Post Fields
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-
-    $serverOutput = curl_exec($ch);
-
-    curl_close($ch);
-
-    return json_decode($serverOutput);
+    return do_post_request("api/v2/authorize", $auth);
   }
 
   public static function get_course_students_count($courseId) {
@@ -390,6 +312,31 @@ class mad_dashboard extends external_api {
     ");
 
     return $students;
+  }
+
+  private static function do_post_request($url, $body)
+  {
+    $apiKey = get_config('mad2api', 'api_key');
+    $ch = curl_init();
+
+    curl_setopt($ch, CURLOPT_URL, self::get_url_for($url));
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));  //Post Fields
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+    $headers = [
+      'accept: application/json',
+      'Content-Type: application/json',
+      "API-KEY: {$apiKey}"
+    ];
+
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+    $response = curl_exec($ch);
+
+    curl_close($ch);
+
+    return json_decode($response);
   }
 
   private static function get_url_for($path)
