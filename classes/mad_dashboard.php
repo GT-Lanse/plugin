@@ -166,26 +166,27 @@ class mad_dashboard extends external_api {
   public static function api_enable_call($courseId) {
     global $COURSE, $USER, $DB;
 
-    $course = array(
-      'moodleId' => $courseId,
-      'fullname' => $COURSE->fullname,
-      'startdate' => $COURSE->startdate,
-      'enddate' => $COURSE->enddate
-    );
-    $teacher = array(
-      'id' => $USER->id,
-      'firstname' => $USER->firstname,
-      'lastname' => $USER->lastname,
-      'email' => $USER->email
-    );
+    $enable = array(
+      'course' => array(
+        'moodleId' => $courseId,
+        'fullname' => $COURSE->fullname,
+        'startdate' => $COURSE->startdate,
+        'enddate' => $COURSE->enddate
+      ),
+      'teacher' => array(
+        'id' => $USER->id,
+        'firstname' => $USER->firstname,
+        'lastname' => $USER->lastname,
+        'email' => $USER->email
+      )
+    )
+
     $auth = array(
       'id' => $USER->id,
       'moodleId' => $courseId
     );
 
-    do_post_request("api/v2/courses", $course);
-    do_post_request("api/v2/teachers", $teacher);
-
+    do_post_request("api/v2/plugin/enable", $enable);
     return json_decode(do_post_request("api/v2/authorize", $auth));
   }
 
