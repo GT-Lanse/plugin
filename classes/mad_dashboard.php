@@ -168,26 +168,27 @@ class mad_dashboard extends external_api {
 
     $enable = array(
       'course' => array(
-        'moodleId' => $courseId,
-        'fullname' => $COURSE->fullname,
-        'startdate' => $COURSE->startdate,
-        'enddate' => $COURSE->enddate
+        'startDate' => '2023-03-26 11:23:05.999760',
+        'endDate' => '2023-03-26 11:23:05.999773',
+        'name' => $COURSE->fullname
       ),
       'teacher' => array(
-        'id' => $USER->id,
-        'firstname' => $USER->firstname,
-        'lastname' => $USER->lastname,
+        'teacherId' => $USER->id,
+        'firstName' => $USER->firstname,
+        'lastName' => $USER->lastname,
         'email' => $USER->email
       )
-    )
+    );
 
     $auth = array(
-      'id' => $USER->id,
+      'teacherId' => $USER->id,
       'moodleId' => $courseId
     );
 
-    do_post_request("api/v2/plugin/enable", $enable);
-    return json_decode(do_post_request("api/v2/authorize", $auth));
+    self::do_post_request("api/v2/courses/{$courseId}/enable", $enable);
+
+    $resp = self::do_post_request("api/v2/authorize", $auth);
+    return $resp->data;
   }
 
   public static function api_send_students($courseId) {
@@ -201,11 +202,10 @@ class mad_dashboard extends external_api {
       $offset = ($currentPage - 1) * $perPage;
 
       $data = array(
-        'course_id' => $courseId,
         'students' => self::get_course_students($courseId, $perPage, $offset)
       );
 
-      do_post_request("api/v2/students", $data)
+      self::do_post_request("api/v2/courses/${courseId}/students/batch", $data);
     }
   }
 
@@ -240,12 +240,12 @@ class mad_dashboard extends external_api {
         GROUP BY m.id
         LIMIT {$perPage} OFFSET {$offset}
       ";
+
       $data = array(
-        'course_id' => $courseId,
         'logs' => $DB->get_records_sql($logs_query)
       );
 
-      do_post_request("api/v2/courses/{$courseId}/logs", $data);
+      self::do_post_request("api/v2/courses/{$courseId}/logs/batch", $data);
     }
   }
 
@@ -253,11 +253,12 @@ class mad_dashboard extends external_api {
     global $USER, $DB;
 
     $auth = array(
-      'id' => $USER->id,
+      'teacherId' => $USER->id,
       'moodleId' => $courseId
     );
 
-    return do_post_request("api/v2/authorize", $auth);
+    $resp = self::do_post_request("api/v2/authorize", $auth);
+    return $resp->data;
   }
 
   public static function get_course_students_count($courseId) {
@@ -278,9 +279,10 @@ class mad_dashboard extends external_api {
     global $DB;
 
     $students = $DB->get_records_sql("
-      SELECT u.id, u.firstname, u.lastname, u.email,
-      (CASE WHEN lastaccess = '0' THEN 'false' ELSE 'true' END) as logged_in,
-      AVG(g.rawgrade) as current_grade
+      SELECT u.id as studentId, u.email, 
+      u.firstname as firstName, u.lastname AS lastName,
+      (CASE WHEN lastaccess = '0' THEN 'false' ELSE 'true' END) as loggedIn,
+      AVG(g.rawgrade) as currentGrade
       FROM {course} c
       JOIN {context} ct ON c.id = ct.instanceid
       JOIN {role_assignments} ra ON ra.contextid = ct.id
