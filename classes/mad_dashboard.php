@@ -188,6 +188,7 @@ class mad_dashboard extends external_api {
     self::do_post_request("api/v2/courses/{$courseId}/enable", $enable);
 
     $resp = self::do_post_request("api/v2/authorize", $auth);
+
     return $resp->data;
   }
 
@@ -258,6 +259,7 @@ class mad_dashboard extends external_api {
     );
 
     $resp = self::do_post_request("api/v2/authorize", $auth);
+
     return $resp->data;
   }
 
@@ -279,10 +281,10 @@ class mad_dashboard extends external_api {
     global $DB;
 
     $students = $DB->get_records_sql("
-      SELECT u.id as studentId, u.email, 
-      u.firstname as firstName, u.lastname AS lastName,
-      (CASE WHEN lastaccess = '0' THEN 'false' ELSE 'true' END) as loggedIn,
-      AVG(g.rawgrade) as currentGrade
+      SELECT u.id AS student_id, u.email,
+      u.firstname AS first_name, u.lastname AS last_name,
+      (CASE WHEN lastaccess = '0' THEN 'false' ELSE 'true' END) AS logged_in,
+      AVG(g.rawgrade) AS current_grade
       FROM {course} c
       JOIN {context} ct ON c.id = ct.instanceid
       JOIN {role_assignments} ra ON ra.contextid = ct.id
@@ -298,7 +300,34 @@ class mad_dashboard extends external_api {
       LIMIT {$perPage} OFFSET {$offset}
     ");
 
-    return $students;
+    return self::camelizeArray($students);
+  }
+
+  public static function camelizeObject($obj) {
+    $new_obj = array();
+
+    foreach($obj as $key => $value) {
+      $new_obj[self::convertToCamel($key, '_')] = $value;
+    }
+
+    return $new_obj;
+  }
+
+  public static function camelizeArray($array) {
+    $formattedArray = [];
+
+    foreach ($array as $item) {
+      array_push($formattedArray, self::camelizeObject($item));
+    }
+
+    return $formattedArray;
+  }
+
+  private static function convertToCamel($str, $delim) {
+    $exploded_str = explode($delim, $str);
+    $exploded_str_camel = array_map('ucwords', $exploded_str);
+
+    return lcfirst(implode($exploded_str_camel, ''));
   }
 
   private static function do_post_request($url, $body)
