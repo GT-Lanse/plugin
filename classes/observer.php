@@ -24,6 +24,8 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+require_once('mad_dashboard.php');
+
 /**
  * Event observer.
  * Sends all the events to mad2 API
@@ -33,39 +35,44 @@ defined('MOODLE_INTERNAL') || die();
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class block_mad2api_observer {
-    /**
-     * Sends the event to the mad2 API
-     *
-     * @param \core\event\base $event
-     */
-    public static function new_event(\core\event\base $event) {
-        global $DB;
+  /**
+   * Sends the event to the mad2 API
+   *
+   * @param \core\event\base $event
+   */
+  public static function new_event(\core\event\base $event) {
+    global $DB;
 
-        $ch = curl_init();
-        $apiUrl = get_config('mad2api', 'api_url');
-        $url = "{$apiUrl}/api/plugin/courses/{$event->courseid}/events";
-        $apiKey = get_config('mad2api', 'api_key');
-        $relatedUser = $DB->get_record('user', array('id' => $event->relateduserid));
-        $user = $DB->get_record('user', array('id' => $event->userid));
-        $data = array(
-          'event_name' => end(explode("\\", $event->eventname)),
-          'course_id' => $event->courseid,
-          'related_user' => $relatedUser,
-          'user' => $user,
-          'other' => $event->other
-        );
-        $headers = [
-          'accept: application/json',
-          'Content-Type: application/json',
-          "API-KEY: {$apiKey}"
-        ];
+    $ch = curl_init();
+    $apiUrl = get_config('mad2api', 'api_url');
 
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_POST, 1);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));  //Post Fields
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-        curl_exec($ch);
-        curl_close($ch);
-    }
+    $url = "{$apiUrl}/api/v2/courses/{$event->courseid}/events";
+
+    $apiKey = get_config('mad2api', 'api_key');
+    $relatedUser = $DB->get_record('user', array('id' => $event->relateduserid));
+    $user = $DB->get_record('user', array('id' => $event->userid));
+
+    $data = array(
+      'id' => $event->id,
+      'eventName' => end(explode("\\", $event->eventname)),
+      'courseId' => $event->courseid,
+      'relatedUser' => \block_mad2api\mad_dashboard::camelizeObject($relatedUser),
+      'user' => \block_mad2api\mad_dashboard::camelizeObject($user),
+      'other' => $event->other
+    );
+
+    $headers = [
+      'accept: application/json',
+      'Content-Type: application/json',
+      "API-KEY: {$apiKey}"
+    ];
+
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));  //Post Fields
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    curl_exec($ch);
+    curl_close($ch);
+  }
 }

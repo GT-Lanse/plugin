@@ -163,54 +163,38 @@ class mad_dashboard extends external_api {
     return $DB->get_records('role_assignments', array('contextid' => $contextid, 'userid' => $userid));
   }
 
-  public static function api_enable_call($courseId){
+  public static function api_enable_call($courseId) {
     global $COURSE, $USER, $DB;
 
-    $apiKey = get_config('mad2api', 'api_key');
-    $organization = get_config('mad2api', 'organization');
-
-    $data = array(
+    $enable = array(
       'course' => array(
-        'id' => $courseId,
-        'fullname' => $COURSE->fullname,
-        'startdate' => $COURSE->startdate,
-        'enddate' => $COURSE->enddate
+        'startDate' => '2023-03-26 11:23:05.999760',
+        'endDate' => '2023-03-26 11:23:05.999773',
+        'name' => $COURSE->fullname
       ),
-      'organization' => $organization,
       'teacher' => array(
-        'id' => $USER->id,
-        'firstname' => $USER->firstname,
-        'lastname' => $USER->lastname,
+        'teacherId' => $USER->id,
+        'firstName' => $USER->firstname,
+        'lastName' => $USER->lastname,
         'email' => $USER->email
       )
     );
 
-    $ch = curl_init();
+    $auth = array(
+      'teacherId' => $USER->id,
+      'moodleId' => $courseId
+    );
 
-    curl_setopt($ch, CURLOPT_URL, self::get_url_for("api/plugin/enable"));
-    curl_setopt($ch, CURLOPT_POST, 1);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));  //Post Fields
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    self::do_post_request("api/v2/courses/{$courseId}/enable", $enable);
 
-    $headers = [
-      'accept: application/json',
-      'Content-Type: application/json',
-      "API-KEY: {$apiKey}"
-    ];
+    $resp = self::do_post_request("api/v2/authorize", $auth);
 
-    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-
-    $serverOutput = curl_exec($ch);
-
-    curl_close($ch);
-
-    return json_decode($serverOutput);
+    return $resp->data;
   }
 
   public static function api_send_students($courseId) {
     global $DB;
 
-    $apiKey = get_config('mad2api', 'api_key');
     $count = self::get_course_students_count($courseId);
     $perPage = 20;
     $endPage = $count / $perPage;
@@ -219,33 +203,15 @@ class mad_dashboard extends external_api {
       $offset = ($currentPage - 1) * $perPage;
 
       $data = array(
-        'course_id' => $courseId,
         'students' => self::get_course_students($courseId, $perPage, $offset)
       );
-      $headers = array(
-        'accept: application/json',
-        'Content-Type: application/json',
-        "API-KEY: {$apiKey}"
-      );
 
-      $ch = curl_init();
-
-      curl_setopt($ch, CURLOPT_URL, self::get_url_for("api/plugin/courses/{$courseId}/students"));
-      curl_setopt($ch, CURLOPT_POST, 1);
-      curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));  //Post Fields
-      curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-      curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-
-      $serverOutput = curl_exec($ch);
-
-      curl_close($ch);
+      self::do_post_request("api/v2/courses/${courseId}/students/batch", $data);
     }
   }
 
   public static function api_send_logs($courseId) {
     global $DB;
-
-    $apiKey = get_config('mad2api', 'api_key');
 
     $countSql = "
       SELECT  COUNT(*)
@@ -275,58 +241,26 @@ class mad_dashboard extends external_api {
         GROUP BY m.id
         LIMIT {$perPage} OFFSET {$offset}
       ";
+
       $data = array(
-        'course_id' => $courseId,
         'logs' => $DB->get_records_sql($logs_query)
       );
-      $headers = array(
-        'accept: application/json',
-        'Content-Type: application/json',
-        "API-KEY: {$apiKey}"
-      );
 
-      $ch = curl_init();
-
-      curl_setopt($ch, CURLOPT_URL, self::get_url_for("api/plugin/courses/{$courseId}/logs"));
-      curl_setopt($ch, CURLOPT_POST, 1);
-      curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));  //Post Fields
-      curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-      curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-
-      $serverOutput = curl_exec($ch);
-
-      curl_close($ch);
+      self::do_post_request("api/v2/courses/{$courseId}/logs/batch", $data);
     }
   }
 
   public static function api_dashboard_auth_url($courseId){
     global $USER, $DB;
 
-    $apiKey = get_config('mad2api', 'api_key');
-
-    $data = array(
-      'class_code' => "{$courseId}",
-      'code_id' => $USER->id,
+    $auth = array(
+      'teacherId' => $USER->id,
+      'moodleId' => $courseId
     );
-    $headers = [
-      'accept: application/json',
-      'Content-Type: application/json',
-      "API-KEY: {$apiKey}"
-    ];
 
-    $ch = curl_init();
+    $resp = self::do_post_request("api/v2/authorize", $auth);
 
-    curl_setopt($ch, CURLOPT_URL, self::get_url_for("api/plugin/enabled"));
-    curl_setopt($ch, CURLOPT_POST, 1);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));  //Post Fields
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-
-    $serverOutput = curl_exec($ch);
-
-    curl_close($ch);
-
-    return json_decode($serverOutput);
+    return $resp->data;
   }
 
   public static function get_course_students_count($courseId) {
@@ -347,9 +281,10 @@ class mad_dashboard extends external_api {
     global $DB;
 
     $students = $DB->get_records_sql("
-      SELECT u.id, u.firstname, u.lastname, u.email,
-      (CASE WHEN lastaccess = '0' THEN 'false' ELSE 'true' END) as logged_in,
-      AVG(g.rawgrade) as current_grade
+      SELECT u.id AS student_id, u.email,
+      u.firstname AS first_name, u.lastname AS last_name,
+      (CASE WHEN lastaccess = '0' THEN 'false' ELSE 'true' END) AS logged_in,
+      AVG(g.rawgrade) AS current_grade
       FROM {course} c
       JOIN {context} ct ON c.id = ct.instanceid
       JOIN {role_assignments} ra ON ra.contextid = ct.id
@@ -365,7 +300,59 @@ class mad_dashboard extends external_api {
       LIMIT {$perPage} OFFSET {$offset}
     ");
 
-    return $students;
+    return self::camelizeArray($students);
+  }
+
+  public static function camelizeObject($obj) {
+    $new_obj = array();
+
+    foreach($obj as $key => $value) {
+      $new_obj[self::convertToCamel($key, '_')] = $value;
+    }
+
+    return $new_obj;
+  }
+
+  public static function camelizeArray($array) {
+    $formattedArray = [];
+
+    foreach ($array as $item) {
+      array_push($formattedArray, self::camelizeObject($item));
+    }
+
+    return $formattedArray;
+  }
+
+  private static function convertToCamel($str, $delim) {
+    $exploded_str = explode($delim, $str);
+    $exploded_str_camel = array_map('ucwords', $exploded_str);
+
+    return lcfirst(implode($exploded_str_camel, ''));
+  }
+
+  private static function do_post_request($url, $body)
+  {
+    $apiKey = get_config('mad2api', 'api_key');
+    $ch = curl_init();
+
+    curl_setopt($ch, CURLOPT_URL, self::get_url_for($url));
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));  //Post Fields
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+    $headers = [
+      'accept: application/json',
+      'Content-Type: application/json',
+      "API-KEY: {$apiKey}"
+    ];
+
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+    $response = curl_exec($ch);
+
+    curl_close($ch);
+
+    return json_decode($response);
   }
 
   private static function get_url_for($path)
