@@ -158,19 +158,21 @@ class mad_dashboard extends external_api {
   }
 
   public static function get_user_roles($userid, $contextid) {
-    global $COURSE, $DB;
+    global $DB;
 
     return $DB->get_records('role_assignments', array('contextid' => $contextid, 'userid' => $userid));
   }
 
   public static function api_enable_call($courseId) {
-    global $COURSE, $USER, $DB;
+    global $USER, $DB;
+
+    $course = $DB->get_record('course', ['id' => $courseId]);
 
     $enable = array(
       'course' => array(
         'startDate' => '2023-03-26 11:23:05.999760',
         'endDate' => '2023-03-26 11:23:05.999773',
-        'name' => $COURSE->fullname
+        'name' => $course->fullname
       ),
       'teacher' => array(
         'teacherId' => $USER->id,
