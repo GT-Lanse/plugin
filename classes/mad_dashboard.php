@@ -170,8 +170,8 @@ class mad_dashboard extends external_api {
 
     $enable = array(
       'course' => array(
-        'startDate' => '2023-03-26 11:23:05.999760',
-        'endDate' => '2023-03-26 11:23:05.999773',
+        'startDate' => $course->startdate,
+        'endDate' => $course->enddate,
         'name' => $course->fullname
       ),
       'teacher' => array(
