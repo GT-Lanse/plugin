@@ -233,6 +233,7 @@ class mad_dashboard extends external_api {
         SELECT  m.id AS id,
                 FROM_UNIXTIME(m.timecreated) AS hour,
                 CONCAT(mu.firstname, ' ',mu.lastname) AS name,
+                m.userid AS userId,
                 m.eventname AS context,
                 m.component AS component
         FROM mdl_logstore_standard_log m
