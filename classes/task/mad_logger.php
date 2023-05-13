@@ -32,8 +32,8 @@ class mad_logger extends \core\task\scheduled_task {
 
       $DB->update_record('mad2api_course_logs', $data);
 
-      \block_mad2api\mad_dashboard::api_send_logs($record->course_id);
       \block_mad2api\mad_dashboard::api_send_students($record->course_id);
+      \block_mad2api\mad_dashboard::api_send_logs($record->course_id);
 
       $data = array(
         'id' => $record->id,
