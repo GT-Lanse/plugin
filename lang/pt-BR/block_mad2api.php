@@ -37,8 +37,6 @@ $string['enable_dashboard'] = 'Habilitar Dashboard';
 $string['disable_dashboard'] = 'Desabilitar Dashboard';
 $string['error_modal_body'] = "
   <p>
-    Nossa equipe está trabalhando para solucionar o problema o quanto antes.
-    Aguarde um momento e tente novamente,
-    caso o problema persista entre em contato através de: <b>mad2api@mail.com.br</b>.
+    Caso o problema persistir, entre em contato através de: <b>suporte.lanse@gmail.com</b>.
   </p>
 ";

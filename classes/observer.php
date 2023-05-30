@@ -53,8 +53,8 @@ class block_mad2api_observer {
     $user = $DB->get_record('user', array('id' => $event->userid));
 
     $data = array(
-      'id' => $event->id,
-      'eventName' => end(explode("\\", $event->eventname)),
+      'id' => isset($event->id) && $event->id,
+      'eventName' => end(...[explode("\\", $event->eventname)]),
       'courseId' => $event->courseid,
       'relatedUser' => \block_mad2api\mad_dashboard::camelizeObject($relatedUser),
       'user' => \block_mad2api\mad_dashboard::camelizeObject($user),

@@ -63,7 +63,7 @@ class mad_dashboard extends external_api {
     $databaseResponse = false;
     $response = self::api_enable_call($params['courseId']);
 
-    if (!property_exists($response, 'url')) {
+    if ($response == null || !property_exists($response, 'url')) {
       return array(['enabled' => false, 'url' => '', 'error' => true]);
     }
 
@@ -199,7 +199,7 @@ class mad_dashboard extends external_api {
 
     $count = self::get_course_students_count($courseId);
     $perPage = 20;
-    $endPage = $count / $perPage;
+    $endPage = ceil($count / $perPage);
 
     for ($currentPage = 1; $currentPage <= $endPage; $currentPage++) {
       $offset = ($currentPage - 1) * $perPage;
@@ -225,7 +225,7 @@ class mad_dashboard extends external_api {
     ";
     $count = $DB->count_records_sql($countSql);
     $perPage = 20;
-    $endPage = $count / $perPage;
+    $endPage = ceil($count / $perPage);
 
     for ($currentPage = 1; $currentPage <= $endPage; $currentPage++) {
       $offset = ($currentPage - 1) * $perPage;
@@ -330,7 +330,7 @@ class mad_dashboard extends external_api {
     $exploded_str = explode($delim, $str);
     $exploded_str_camel = array_map('ucwords', $exploded_str);
 
-    return lcfirst(implode($exploded_str_camel, ''));
+    return lcfirst(implode('', $exploded_str_camel));
   }
 
   private static function do_post_request($url, $body)
