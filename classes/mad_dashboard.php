@@ -143,6 +143,33 @@ class mad_dashboard extends external_api {
     return array(['disabled' => $databaseResponse]);
   }
 
+  public static function check_data_on_api($courseId)
+  {
+    global $DB;
+
+    $courseLog = $DB->get_record(
+      "mad2api_course_logs", array('course_id' => $courseId)
+    );
+
+    if (!$courseLog) {
+      return;
+    }
+
+    $response = self::api_check_course_data($courseId);
+
+    if ($response != null && $response->resend_data) {
+      $updatedAttributes = array(
+        'id' => $courseLog->id,
+        'status' => 'todo',
+        'updated_at' => date('Y-m-d H:i:s')
+      );
+
+      $databaseResponse = $DB->update_record(
+        'mad2api_course_logs', $updatedAttributes, false
+      );
+    }
+  }
+
   public static function is_current_user_course_teacher($contextid) {
     global $USER;
 
