@@ -44,14 +44,17 @@ class block_mad2api extends block_base {
     }
 
     $this->content = new stdClass();
+
     $enabled = $DB->get_record(
       "mad2api_dashboard_settings",
-      array( 'user_id' => $USER->id, 'course_id' => $COURSE->id, 'is_enabled' => 1)
+      array('user_id' => $USER->id, 'course_id' => $COURSE->id, 'is_enabled' => 1)
     );
 
     $PAGE->requires->js_call_amd('block_mad2api/enable_button_api_call', 'init', array($COURSE->id));
 
     if ($enabled) {
+      \block_mad2api\mad_dashboard::check_data_on_api($COURSE->id);
+
       $courseInfo = \block_mad2api\mad_dashboard::enable($COURSE->id);
       $url = $courseInfo[0]['url'];
 

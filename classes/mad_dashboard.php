@@ -143,6 +143,33 @@ class mad_dashboard extends external_api {
     return array(['disabled' => $databaseResponse]);
   }
 
+  public static function check_data_on_api($courseId)
+  {
+    global $DB;
+
+    $courseLog = $DB->get_record(
+      "mad2api_course_logs", array('course_id' => $courseId)
+    );
+
+    if (!$courseLog) {
+      return;
+    }
+
+    $response = self::api_check_course_data($courseId);
+
+    if ($response != null && $response->resend_data) {
+      $updatedAttributes = array(
+        'id' => $courseLog->id,
+        'status' => 'todo',
+        'updated_at' => date('Y-m-d H:i:s')
+      );
+
+      $databaseResponse = $DB->update_record(
+        'mad2api_course_logs', $updatedAttributes, false
+      );
+    }
+  }
+
   public static function is_current_user_course_teacher($contextid) {
     global $USER;
 
@@ -190,6 +217,12 @@ class mad_dashboard extends external_api {
     self::do_post_request("api/v2/courses/{$courseId}/enable", $enable);
 
     $resp = self::do_post_request("api/v2/authorize", $auth);
+
+    return $resp->data;
+  }
+
+  public static function api_check_course_data($courseId) {
+    $resp = self::do_get_request("api/v2/plugin/courses/{$courseId}/resend_data");
 
     return $resp->data;
   }
@@ -341,6 +374,29 @@ class mad_dashboard extends external_api {
     curl_setopt($ch, CURLOPT_URL, self::get_url_for($url));
     curl_setopt($ch, CURLOPT_POST, 1);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));  //Post Fields
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+    $headers = [
+      'accept: application/json',
+      'Content-Type: application/json',
+      "API-KEY: {$apiKey}"
+    ];
+
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+    $response = curl_exec($ch);
+
+    curl_close($ch);
+
+    return json_decode($response);
+  }
+
+  private static function do_get_request($url)
+  {
+    $apiKey = get_config('mad2api', 'api_key');
+    $ch = curl_init();
+
+    curl_setopt($ch, CURLOPT_URL, self::get_url_for($url));
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
     $headers = [
