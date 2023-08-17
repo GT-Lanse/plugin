@@ -221,6 +221,12 @@ class mad_dashboard extends external_api {
     return $resp->data;
   }
 
+  public static function api_check_course_data($courseId) {
+    $resp = self::do_get_request("api/v2/plugin/courses/{$courseId}/resend_data");
+
+    return $resp->data;
+  }
+
   public static function api_send_students($courseId) {
     global $DB;
 
@@ -368,6 +374,29 @@ class mad_dashboard extends external_api {
     curl_setopt($ch, CURLOPT_URL, self::get_url_for($url));
     curl_setopt($ch, CURLOPT_POST, 1);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));  //Post Fields
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+    $headers = [
+      'accept: application/json',
+      'Content-Type: application/json',
+      "API-KEY: {$apiKey}"
+    ];
+
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+    $response = curl_exec($ch);
+
+    curl_close($ch);
+
+    return json_decode($response);
+  }
+
+  private static function do_get_request($url)
+  {
+    $apiKey = get_config('mad2api', 'api_key');
+    $ch = curl_init();
+
+    curl_setopt($ch, CURLOPT_URL, self::get_url_for($url));
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
     $headers = [
