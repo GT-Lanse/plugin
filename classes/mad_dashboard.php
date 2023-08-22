@@ -148,7 +148,7 @@ class mad_dashboard extends external_api {
     global $DB;
 
     $courseLog = $DB->get_record(
-      "mad2api_course_logs", array('course_id' => $courseId)
+      "mad2api_course_logs", array('course_id' => $courseId, 'status' => 'done')
     );
 
     if (!$courseLog) {
@@ -222,9 +222,7 @@ class mad_dashboard extends external_api {
   }
 
   public static function api_check_course_data($courseId) {
-    $resp = self::do_get_request("api/v2/plugin/courses/{$courseId}/resend_data");
-
-    return $resp->data;
+    return self::do_get_request("api/v2/plugin/courses/{$courseId}/resend_data");
   }
 
   public static function api_send_students($courseId) {
