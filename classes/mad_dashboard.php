@@ -190,6 +190,46 @@ class mad_dashboard extends external_api {
     return $DB->get_records('role_assignments', array('contextid' => $contextid, 'userid' => $userid));
   }
 
+  private static function send_settings_to_api() {
+    global $DB;
+
+    $apiSetting = $DB->get_records("mad2api_api_settings")[0];
+
+    if (!$apiSetting || ($apiSetting->sent_at < new DateTime("today"))) {
+      return;
+    }
+
+    $updatedAttributes = array(
+      'id' => $apiSetting->id,
+      'sent_at' => date('Y-m-d H:i:s'),
+      'updated_at' => date('Y-m-d H:i:s')
+    );
+
+    $DB->update_record(
+      'mad2api_api_settings', $updatedAttributes, false
+    );
+
+    $settings = array(
+      'pluginVersion' => get_config('block_mad2api')->version,
+      'moodleVersion' => $CFG->release,
+    );
+
+    self::do_put_request("api/v2/settings/organizations/", $settings);
+  }
+
+  public static function api_installation_call()
+  {
+    global $CFG;
+
+    $settings = array(
+      'pluginVersion' => get_config('block_mad2api')->version,
+      'moodleVersion' => $CFG->release,
+      'installationDate' => date('Y-m-d H:i:s')
+    );
+
+    self::do_put_request("api/v2/settings/organizations/", $settings);
+  }
+
   public static function api_enable_call($courseId) {
     global $USER, $DB;
 
@@ -215,6 +255,7 @@ class mad_dashboard extends external_api {
     );
 
     self::do_post_request("api/v2/courses/{$courseId}/enable", $enable);
+    self::send_settings_to_api();
 
     $resp = self::do_post_request("api/v2/authorize", $auth);
 
@@ -294,7 +335,7 @@ class mad_dashboard extends external_api {
 
     $resp = self::do_post_request("api/v2/authorize", $auth);
 
-    return $resp->data;
+    return !!$resp ? $resp->data : array();
   }
 
   public static function get_course_students_count($courseId) {
@@ -340,6 +381,10 @@ class mad_dashboard extends external_api {
   public static function camelizeObject($obj) {
     $new_obj = array();
 
+    if (gettype($obj) == 'boolean') {
+      return $new_obj;
+    }
+
     foreach($obj as $key => $value) {
       $new_obj[self::convertToCamel($key, '_')] = $value;
     }
@@ -371,6 +416,32 @@ class mad_dashboard extends external_api {
 
     curl_setopt($ch, CURLOPT_URL, self::get_url_for($url));
     curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));  //Post Fields
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+    $headers = [
+      'accept: application/json',
+      'Content-Type: application/json',
+      "API-KEY: {$apiKey}"
+    ];
+
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+    $response = curl_exec($ch);
+
+    curl_close($ch);
+
+    return json_decode($response);
+  }
+
+  private static function do_put_request($url, $body)
+  {
+    $apiKey = get_config('mad2api', 'api_key');
+    $ch = curl_init();
+
+    curl_setopt($ch, CURLOPT_URL, self::get_url_for($url));
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT");
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));  //Post Fields
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 

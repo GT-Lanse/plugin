@@ -38,7 +38,19 @@ $settings->add(new admin_setting_configtext('mad2api/api_url',
                                             '',
                                             'http://api.lanse.prd.apps.kloud.rnp.br'));
 
-$settings->add(new admin_setting_configtext('mad2api/api_key',
-                                              'Chave API KEY Plugin',
-                                              '',
-                                              null));
+$apiKey = new admin_setting_configtext(
+  'mad2api/api_key',
+  'Chave API KEY Plugin',
+  '',
+  null
+);
+
+$apiKey->set_updatedcallback(function () {
+  require_once('classes/mad_dashboard.php');
+
+  \block_mad2api\mad_dashboard::api_installation_call();
+
+  return true;
+});
+
+$settings->add($apiKey);

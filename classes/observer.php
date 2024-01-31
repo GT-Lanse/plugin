@@ -45,20 +45,19 @@ class block_mad2api_observer {
 
     $ch = curl_init();
     $apiUrl = get_config('mad2api', 'api_url');
-
     $url = "{$apiUrl}/api/v2/courses/{$event->courseid}/events";
-
     $apiKey = get_config('mad2api', 'api_key');
-    $relatedUser = $DB->get_record('user', array('id' => $event->relateduserid));
-    $user = $DB->get_record('user', array('id' => $event->userid));
 
     $data = array(
-      'id' => isset($event->id) && $event->id,
-      'eventName' => end(...[explode("\\", $event->eventname)]),
-      'courseId' => $event->courseid,
-      'relatedUser' => \block_mad2api\mad_dashboard::camelizeObject($relatedUser),
-      'user' => \block_mad2api\mad_dashboard::camelizeObject($user),
-      'other' => $event->other
+      'event_name' => $event->eventname,
+      'component' => $event->component,
+      'target' => $event->target,
+      'action' => $event->action,
+      'course_id' => $event->courseid,
+      'related_user_id' => $event->relateduserid,
+      'user_id' => $event->userid,
+      'other' => $event->other,
+      'raw_data' => \block_mad2api\mad_dashboard::camelizeObject($event)
     );
 
     $headers = [

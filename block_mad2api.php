@@ -23,6 +23,7 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+// require_once(__DIR__ . '/config.php');
 require_once('classes/mad_dashboard.php');
 
 class block_mad2api extends block_base {

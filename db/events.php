@@ -26,50 +26,103 @@
 defined('MOODLE_INTERNAL') || die();
 
 $observers = array(
+  // array(
+  //   'eventname' => '\core\event\user_graded',
+  //   'callback'  => 'block_mad2api_observer::new_event',
+  //   'internal'  => false, // This means that we get events only after transaction commit.
+  //   'priority'  => 1000,
+  // ),
+  // array(
+  //   'eventname' => '\core\event\user_enrolment_created',
+  //   'callback'  => 'block_mad2api_observer::new_event',
+  //   'internal'  => false, // This means that we get events only after transaction commit.
+  //   'priority'  => 1000,
+  // ),
+  // array(
+  //   'eventname' => '\core\event\user_enrolment_deleted',
+  //   'callback'  => 'block_mad2api_observer::new_event',
+  //   'internal'  => false, // This means that we get events only after transaction commit.
+  //   'priority'  => 1000,
+  // ),
+  // array(
+  //   'eventname' => '\core\event\course_viewed',
+  //   'callback'  => 'block_mad2api_observer::new_event',
+  //   'internal'  => false, // This means that we get events only after transaction commit.
+  //   'priority'  => 1000,
+  // ),
+  // array(
+  //   'eventname' => '\core\event\course_module_created',
+  //   'callback'  => 'block_mad2api_observer::new_event',
+  //   'internal'  => false, // This means that we get events only after transaction commit.
+  //   'priority'  => 1000,
+  // ),
+
   array(
-    'eventname' => '\core\event\user_graded',
+    'eventname' => '\core\event\course_module_deleted',
+    'callback'  => 'block_mad2api_observer::new_event',
+    'internal'  => false, // This means that we get events only after transaction commit.
+    'priority'  => 1000,
+  ),
+
+  // quiz
+  array(
+    'eventname' => '\mod_quiz\event\course_module_viewed',
     'callback'  => 'block_mad2api_observer::new_event',
     'internal'  => false, // This means that we get events only after transaction commit.
     'priority'  => 1000,
   ),
   array(
-    'eventname' => '\core\event\user_enrolment_created',
+    'eventname' => '\mod_quiz\event\attempt_submitted',
+    'callback'  => 'block_mad2api_observer::new_event',
+    'internal'  => false, // This means that we get events only after transaction commit.
+    'priority'  => 1000,
+  ),
+
+  // h5p
+  array(
+    'eventname' => '\mod_h5pactivity\event\course_module_viewed',
     'callback'  => 'block_mad2api_observer::new_event',
     'internal'  => false, // This means that we get events only after transaction commit.
     'priority'  => 1000,
   ),
   array(
-    'eventname' => '\core\event\user_enrolment_deleted',
+    'eventname' => '\mod_h5pactivity\event\statement_received',
+    'callback'  => 'block_mad2api_observer::new_event',
+    'internal'  => false, // This means that we get events only after transaction commit.
+    'priority'  => 1000,
+  ),
+
+  // assign
+  array(
+    'eventname' => '\mod_assign\event\course_module_viewed',
     'callback'  => 'block_mad2api_observer::new_event',
     'internal'  => false, // This means that we get events only after transaction commit.
     'priority'  => 1000,
   ),
   array(
-    'eventname' => '\core\event\user_enrolment_updated',
+    'eventname' => '\mod_assign\event\assessable_submitted',
+    'callback'  => 'block_mad2api_observer::new_event',
+    'internal'  => false, // This means that we get events only after transaction commit.
+    'priority'  => 1000,
+  ),
+
+  // forum
+  array(
+    'eventname' => '\mod_forum\event\post_created',
     'callback'  => 'block_mad2api_observer::new_event',
     'internal'  => false, // This means that we get events only after transaction commit.
     'priority'  => 1000,
   ),
   array(
-    'eventname' => '\mod_book\event\course_module_viewed',
+    'eventname' => '\mod_forum\event\course_module_viewed',
     'callback'  => 'block_mad2api_observer::new_event',
     'internal'  => false, // This means that we get events only after transaction commit.
     'priority'  => 1000,
   ),
+
+  // choice
   array(
-    'eventname' => '\mod_chat\event\course_module_instance_list_viewed',
-    'callback'  => 'block_mad2api_observer::new_event',
-    'internal'  => false, // This means that we get events only after transaction commit.
-    'priority'  => 1000,
-  ),
-  array(
-    'eventname' => '\mod_chat\event\sessions_viewed',
-    'callback'  => 'block_mad2api_observer::new_event',
-    'internal'  => false, // This means that we get events only after transaction commit.
-    'priority'  => 1000,
-  ),
-  array(
-    'eventname' => '\mod_choice\event\course_module_instance_list_viewed',
+    'eventname' => '\mod_choice\event\answer_created',
     'callback'  => 'block_mad2api_observer::new_event',
     'internal'  => false, // This means that we get events only after transaction commit.
     'priority'  => 1000,
@@ -80,188 +133,10 @@ $observers = array(
     'internal'  => false, // This means that we get events only after transaction commit.
     'priority'  => 1000,
   ),
+
+  // wiki
   array(
-    'eventname' => '\mod_choice\event\report_viewed',
-    'callback'  => 'block_mad2api_observer::new_event',
-    'internal'  => false, // This means that we get events only after transaction commit.
-    'priority'  => 1000,
-  ),
-  array(
-    'eventname' => '\mod_data\event\course_module_instance_list_viewed',
-    'callback'  => 'block_mad2api_observer::new_event',
-    'internal'  => false, // This means that we get events only after transaction commit.
-    'priority'  => 1000,
-  ),
-  array(
-    'eventname' => '\mod_data\event\course_module_viewed',
-    'callback'  => 'block_mad2api_observer::new_event',
-    'internal'  => false, // This means that we get events only after transaction commit.
-    'priority'  => 1000,
-  ),
-  array(
-    'eventname' => '\mod_data\event\template_viewed',
-    'callback'  => 'block_mad2api_observer::new_event',
-    'internal'  => false, // This means that we get events only after transaction commit.
-    'priority'  => 1000,
-  ),
-  array(
-    'eventname' => '\mod_feedback\event\course_module_instance_list_viewed',
-    'callback'  => 'block_mad2api_observer::new_event',
-    'internal'  => false, // This means that we get events only after transaction commit.
-    'priority'  => 1000,
-  ),
-  array(
-    'eventname' => '\mod_feedback\event\course_module_viewed',
-    'callback'  => 'block_mad2api_observer::new_event',
-    'internal'  => false, // This means that we get events only after transaction commit.
-    'priority'  => 1000,
-  ),
-  array(
-    'eventname' => '\mod_folder\event\course_module_instance_list_viewed',
-    'callback'  => 'block_mad2api_observer::new_event',
-    'internal'  => false, // This means that we get events only after transaction commit.
-    'priority'  => 1000,
-  ),
-  array(
-    'eventname' => '\mod_folder\event\course_module_viewed',
-    'callback'  => 'block_mad2api_observer::new_event',
-    'internal'  => false, // This means that we get events only after transaction commit.
-    'priority'  => 1000,
-  ),
-  array(
-    'eventname' => '\mod_forum\event\course_module_instance_list_viewed',
-    'callback'  => 'block_mad2api_observer::new_event',
-    'internal'  => false, // This means that we get events only after transaction commit.
-    'priority'  => 1000,
-  ),
-  array(
-    'eventname' => '\mod_forum\event\discussion_viewed',
-    'callback'  => 'block_mad2api_observer::new_event',
-    'internal'  => false, // This means that we get events only after transaction commit.
-    'priority'  => 1000,
-  ),
-  array(
-    'eventname' => '\mod_forum\event\forum_viewed',
-    'callback'  => 'block_mad2api_observer::new_event',
-    'internal'  => false, // This means that we get events only after transaction commit.
-    'priority'  => 1000,
-  ),
-  array(
-    'eventname' => '\mod_lesson\event\course_module_instance_list_viewed',
-    'callback'  => 'block_mad2api_observer::new_event',
-    'internal'  => false, // This means that we get events only after transaction commit.
-    'priority'  => 1000,
-  ),
-  array(
-    'eventname' => '\mod_lesson\event\course_module_viewed',
-    'callback'  => 'block_mad2api_observer::new_event',
-    'internal'  => false, // This means that we get events only after transaction commit.
-    'priority'  => 1000,
-  ),
-  array(
-    'eventname' => '\mod_lesson\event\essay_attempt_viewed',
-    'callback'  => 'block_mad2api_observer::new_event',
-    'internal'  => false, // This means that we get events only after transaction commit.
-    'priority'  => 1000,
-  ),
-  array(
-    'eventname' => '\mod_lesson\event\highscores_viewed',
-    'callback'  => 'block_mad2api_observer::new_event',
-    'internal'  => false, // This means that we get events only after transaction commit.
-    'priority'  => 1000,
-  ),
-  array(
-    'eventname' => '\mod_lti\event\course_module_instance_list_viewed',
-    'callback'  => 'block_mad2api_observer::new_event',
-    'internal'  => false, // This means that we get events only after transaction commit.
-    'priority'  => 1000,
-  ),
-  array(
-    'eventname' => '\mod_lti\event\course_module_viewed',
-    'callback'  => 'block_mad2api_observer::new_event',
-    'internal'  => false, // This means that we get events only after transaction commit.
-    'priority'  => 1000,
-  ),
-  array(
-    'eventname' => '\mod_page\event\course_module_instance_list_viewed',
-    'callback'  => 'block_mad2api_observer::new_event',
-    'internal'  => false, // This means that we get events only after transaction commit.
-    'priority'  => 1000,
-  ),
-  array(
-    'eventname' => '\mod_page\event\course_module_viewed',
-    'callback'  => 'block_mad2api_observer::new_event',
-    'internal'  => false, // This means that we get events only after transaction commit.
-    'priority'  => 1000,
-  ),
-  array(
-    'eventname' => '\mod_resource\event\course_module_instance_list_viewed',
-    'callback'  => 'block_mad2api_observer::new_event',
-    'internal'  => false, // This means that we get events only after transaction commit.
-    'priority'  => 1000,
-  ),
-  array(
-    'eventname' => '\mod_resource\event\course_module_viewed',
-    'callback'  => 'block_mad2api_observer::new_event',
-    'internal'  => false, // This means that we get events only after transaction commit.
-    'priority'  => 1000,
-  ),
-  array(
-    'eventname' => '\mod_scorm\event\course_module_instance_list_viewed',
-    'callback'  => 'block_mad2api_observer::new_event',
-    'internal'  => false, // This means that we get events only after transaction commit.
-    'priority'  => 1000,
-  ),
-  array(
-    'eventname' => '\mod_scorm\event\course_module_viewed',
-    'callback'  => 'block_mad2api_observer::new_event',
-    'internal'  => false, // This means that we get events only after transaction commit.
-    'priority'  => 1000,
-  ),
-  array(
-    'eventname' => '\mod_scorm\event\interactions_viewed',
-    'callback'  => 'block_mad2api_observer::new_event',
-    'internal'  => false, // This means that we get events only after transaction commit.
-    'priority'  => 1000,
-  ),
-  array(
-    'eventname' => '\mod_scorm\event\report_viewed',
-    'callback'  => 'block_mad2api_observer::new_event',
-    'internal'  => false, // This means that we get events only after transaction commit.
-    'priority'  => 1000,
-  ),
-  array(
-    'eventname' => '\mod_scorm\event\tracks_viewed',
-    'callback'  => 'block_mad2api_observer::new_event',
-    'internal'  => false, // This means that we get events only after transaction commit.
-    'priority'  => 1000,
-  ),
-  array(
-    'eventname' => '\mod_scorm\event\user_report_viewed',
-    'callback'  => 'block_mad2api_observer::new_event',
-    'internal'  => false, // This means that we get events only after transaction commit.
-    'priority'  => 1000,
-  ),
-  array(
-    'eventname' => '\mod_url\event\course_module_instance_list_viewed',
-    'callback'  => 'block_mad2api_observer::new_event',
-    'internal'  => false, // This means that we get events only after transaction commit.
-    'priority'  => 1000,
-  ),
-  array(
-    'eventname' => '\mod_url\event\course_module_viewed',
-    'callback'  => 'block_mad2api_observer::new_event',
-    'internal'  => false, // This means that we get events only after transaction commit.
-    'priority'  => 1000,
-  ),
-  array(
-    'eventname' => '\mod_wiki\event\comments_viewed',
-    'callback'  => 'block_mad2api_observer::new_event',
-    'internal'  => false, // This means that we get events only after transaction commit.
-    'priority'  => 1000,
-  ),
-  array(
-    'eventname' => '\mod_wiki\event\course_module_instance_list_viewed',
+    'eventname' => '\mod_wiki\event\comment_created',
     'callback'  => 'block_mad2api_observer::new_event',
     'internal'  => false, // This means that we get events only after transaction commit.
     'priority'  => 1000,
@@ -272,32 +147,48 @@ $observers = array(
     'internal'  => false, // This means that we get events only after transaction commit.
     'priority'  => 1000,
   ),
+
+  // url
   array(
-    'eventname' => '\mod_wiki\event\page_diff_viewed',
+    'eventname' => '\mod_url\event\course_module_viewed',
+    'callback'  => 'block_mad2api_observer::new_event',
+    'internal'  => false, // This means that we get events only after transaction commit.
+    'priority'  => 1000,
+  ),
+
+  // file
+  array(
+    'eventname' => '\mod_resource\event\course_module_viewed',
+    'callback'  => 'block_mad2api_observer::new_event',
+    'internal'  => false, // This means that we get events only after transaction commit.
+    'priority'  => 1000,
+  ),
+
+  // page
+  array(
+    'eventname' => '\mod_page\event\course_module_viewed',
+    'callback'  => 'block_mad2api_observer::new_event',
+    'internal'  => false, // This means that we get events only after transaction commit.
+    'priority'  => 1000,
+  ),
+
+  // feedback
+  array(
+    'eventname' => '\mod_feedback\event\response_submitted',
     'callback'  => 'block_mad2api_observer::new_event',
     'internal'  => false, // This means that we get events only after transaction commit.
     'priority'  => 1000,
   ),
   array(
-    'eventname' => '\mod_wiki\event\page_history_viewed',
+    'eventname' => '\mod_feedback\event\course_module_viewed',
     'callback'  => 'block_mad2api_observer::new_event',
     'internal'  => false, // This means that we get events only after transaction commit.
     'priority'  => 1000,
   ),
+
+  // workshop
   array(
-    'eventname' => '\mod_wiki\event\page_map_viewed',
-    'callback'  => 'block_mad2api_observer::new_event',
-    'internal'  => false, // This means that we get events only after transaction commit.
-    'priority'  => 1000,
-  ),
-  array(
-    'eventname' => '\mod_wiki\event\page_version_viewed',
-    'callback'  => 'block_mad2api_observer::new_event',
-    'internal'  => false, // This means that we get events only after transaction commit.
-    'priority'  => 1000,
-  ),
-  array(
-    'eventname' => '\mod_wiki\event\page_viewed',
+    'eventname' => '\mod_workshop\event\assessable_uploaded',
     'callback'  => 'block_mad2api_observer::new_event',
     'internal'  => false, // This means that we get events only after transaction commit.
     'priority'  => 1000,
@@ -308,44 +199,58 @@ $observers = array(
     'internal'  => false, // This means that we get events only after transaction commit.
     'priority'  => 1000,
   ),
+
+  // chat
   array(
-    'eventname' => '\mod_workshop\event\instances_list_viewed',
+    'eventname' => '\mod_chat\event\message_sent',
     'callback'  => 'block_mad2api_observer::new_event',
     'internal'  => false, // This means that we get events only after transaction commit.
     'priority'  => 1000,
   ),
   array(
-    'eventname' => '\mod_workshop\event\submission_viewed',
+    'eventname' => '\mod_chat\event\course_module_viewed',
+    'callback'  => 'block_mad2api_observer::new_event',
+    'internal'  => false, // This means that we get events only after transaction commit.
+    'priority'  => 1000,
+  ),
+
+  // survey
+  array(
+    'eventname' => '\mod_survey\event\response_submitted',
     'callback'  => 'block_mad2api_observer::new_event',
     'internal'  => false, // This means that we get events only after transaction commit.
     'priority'  => 1000,
   ),
   array(
-    'eventname' => 'report_log\event\content_viewed',
+    'eventname' => '\mod_survey\event\course_module_viewed',
+    'callback'  => 'block_mad2api_observer::new_event',
+    'internal'  => false, // This means that we get events only after transaction commit.
+    'priority'  => 1000,
+  ),
+
+  // scorm
+  array(
+    'eventname' => '\mod_scorm\event\scoreraw_submitted',
     'callback'  => 'block_mad2api_observer::new_event',
     'internal'  => false, // This means that we get events only after transaction commit.
     'priority'  => 1000,
   ),
   array(
-    'eventname' => 'report_loglive\event\content_viewed',
+    'eventname' => '\mod_scorm\event\course_module_viewed',
+    'callback'  => 'block_mad2api_observer::new_event',
+    'internal'  => false, // This means that we get events only after transaction commit.
+    'priority'  => 1000,
+  ),
+
+  // lesson
+  array(
+    'eventname' => '\mod_lesson\event\question_answered',
     'callback'  => 'block_mad2api_observer::new_event',
     'internal'  => false, // This means that we get events only after transaction commit.
     'priority'  => 1000,
   ),
   array(
-    'eventname' => 'report_outline\event\content_viewed',
-    'callback'  => 'block_mad2api_observer::new_event',
-    'internal'  => false, // This means that we get events only after transaction commit.
-    'priority'  => 1000,
-  ),
-  array(
-    'eventname' => 'report_participation\event\content_viewed',
-    'callback'  => 'block_mad2api_observer::new_event',
-    'internal'  => false, // This means that we get events only after transaction commit.
-    'priority'  => 1000,
-  ),
-  array(
-    'eventname' => 'report_stats\event\content_viewed',
+    'eventname' => '\mod_lesson\event\course_module_viewed',
     'callback'  => 'block_mad2api_observer::new_event',
     'internal'  => false, // This means that we get events only after transaction commit.
     'priority'  => 1000,
