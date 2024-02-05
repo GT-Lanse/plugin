@@ -54,10 +54,12 @@ class block_mad2api_observer {
       'target' => $event->target,
       'action' => $event->action,
       'course_id' => $event->courseid,
-      'related_user_id' => $event->relateduserid,
-      'user_id' => $event->userid,
+      'moodle_related_user_id' => $event->relateduserid,
+      'moodle_user_id' => $event->userid,
       'other' => $event->other,
-      'raw_data' => \block_mad2api\mad_dashboard::camelizeObject($event)
+      "context_id" => $event->contextid,
+      'raw_data' => \block_mad2api\mad_dashboard::camelizeObject($event),
+      'time_created' => $event->timecreated
     );
 
     $headers = [
