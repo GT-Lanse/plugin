@@ -37,6 +37,6 @@ $string['enable_dashboard'] = 'Enable Dashboard';
 $string['disable_dashboard'] = 'Disable Dashboard';
 $string['error_modal_body'] = "
   <p>
-    If the problem persists, contact us at: <b>suporte.lanse@gmail.com</b>.
+    Please ensure that the course you are trying to enable has start date and end date configured correctly. If the problem persists, please contact us at: <b>suporte.lanse@gmail.com</b>. Thank you!
   </p>
 ";

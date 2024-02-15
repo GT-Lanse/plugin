@@ -33,11 +33,6 @@ $settings->add(new admin_setting_configtext('mad2api/organization',
                                                '',
                                                'UFSC'));
 
-$settings->add(new admin_setting_configtext('mad2api/api_url',
-                                            get_string('apiurl', 'block_mad2api'),
-                                            '',
-                                            'https://api.lanse.com.br'));
-
 $apiKey = new admin_setting_configtext(
   'mad2api/api_key',
   'Chave API KEY Plugin',

@@ -485,7 +485,7 @@ class mad_dashboard extends external_api {
 
   private static function get_url_for($path)
   {
-    $apiUrl = get_config('mad2api', 'api_url');
+    $apiUrl = "https://api.lanse.com.br";
 
     return "{$apiUrl}/{$path}";
   }

@@ -44,7 +44,8 @@ class block_mad2api_observer {
     global $DB;
 
     $ch = curl_init();
-    $apiUrl = get_config('mad2api', 'api_url');
+    $apiUrl = "https://api.lanse.com.br";
+
     $url = "{$apiUrl}/api/v2/courses/{$event->courseid}/events";
     $apiKey = get_config('mad2api', 'api_key');
 
