@@ -12,7 +12,7 @@ class mad_send_logs extends \core\task\adhoc_task {
     );
 
     if (!!$courseLog) {
-      return
+      return;
     }
 
     \block_mad2api\mad_dashboard::api_send_students($courseId);

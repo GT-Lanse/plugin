@@ -274,7 +274,7 @@ class mad_dashboard extends external_api {
     );
 
     if (!!$courseLog) {
-      return
+      return;
     }
 
     $count = self::get_course_students_count($courseId);
@@ -300,7 +300,7 @@ class mad_dashboard extends external_api {
     );
 
     if (!!$courseLog) {
-      return
+      return;
     }
 
     $countSql = "
