@@ -269,6 +269,14 @@ class mad_dashboard extends external_api {
   public static function api_send_students($courseId) {
     global $DB;
 
+    $courseLog = $DB->get_record(
+      "mad2api_course_logs", array('course_id' => $courseId, 'status' => 'done')
+    );
+
+    if (!!$courseLog) {
+      return
+    }
+
     $count = self::get_course_students_count($courseId);
     $perPage = 20;
     $endPage = ceil($count / $perPage);
@@ -286,6 +294,14 @@ class mad_dashboard extends external_api {
 
   public static function api_send_logs($courseId) {
     global $DB;
+
+    $courseLog = $DB->get_record(
+      "mad2api_course_logs", array('course_id' => $courseId, 'status' => 'done')
+    );
+
+    if (!!$courseLog) {
+      return
+    }
 
     $countSql = "
       SELECT  COUNT(*)
