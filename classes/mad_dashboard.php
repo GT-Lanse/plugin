@@ -3,7 +3,6 @@ namespace block_mad2api;
 defined('MOODLE_INTERNAL') || die();
 
 require_once("$CFG->libdir/externallib.php");
-require_once('task/mad_send_logs.php');
 
 use external_api;
 use external_function_parameters;
@@ -90,7 +89,13 @@ class mad_dashboard extends external_api {
         'status'     => 'todo'
       );
 
-      $DB->insert_record('mad2api_course_logs', $recordCourseLogs, false);
+      $courseLog = $DB->get_record(
+        "mad2api_course_logs", array('course_id' => $courseId)
+      );
+
+      if (!isset($courseLog)) {
+        $DB->insert_record('mad2api_course_logs', $recordCourseLogs, false);
+      }
     }
 
     return array(['enabled' => $databaseResponse, 'url' => $response->url, 'error' => false ]);
@@ -288,7 +293,7 @@ class mad_dashboard extends external_api {
         'students' => self::get_course_students($courseId, $perPage, $offset)
       );
 
-      self::do_post_request("api/v2/courses/${courseId}/students/batch", $data);
+      self::do_post_request("api/v2/courses/${courseId}/students/batch", $data, $courseId);
     }
   }
 
@@ -322,7 +327,7 @@ class mad_dashboard extends external_api {
                 FROM_UNIXTIME(m.timecreated) AS hour,
                 CONCAT(mu.firstname, ' ',mu.lastname) AS name,
                 m.userid AS userId,
-                m.eventname AS context,
+                m.check_data_on_apiname AS context,
                 m.component AS component
         FROM mdl_logstore_standard_log m
         JOIN mdl_role_assignments B
@@ -337,7 +342,7 @@ class mad_dashboard extends external_api {
         'logs' => $DB->get_records_sql($logs_query)
       );
 
-      self::do_post_request("api/v2/courses/{$courseId}/logs/batch", $data);
+      self::do_post_request("api/v2/courses/{$courseId}/logs/batch", $data, $courseId);
     }
   }
 
@@ -349,7 +354,7 @@ class mad_dashboard extends external_api {
       'moodleId' => $courseId
     );
 
-    $resp = self::do_post_request("api/v2/authorize", $auth);
+    $resp = self::do_post_request("api/v2/authorize", $auth, $courseId);
 
     return !!$resp ? $resp->data : array();
   }
@@ -418,6 +423,14 @@ class mad_dashboard extends external_api {
     return $formattedArray;
   }
 
+  private static function disable_course_if_not_found($ch, $courseId) {
+    $http_status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+    if ($http_status == 404) {
+      self::disable($courseId);
+    }
+  },
+
   private static function convertToCamel($str, $delim) {
     $exploded_str = explode($delim, $str);
     $exploded_str_camel = array_map('ucwords', $exploded_str);
@@ -425,7 +438,7 @@ class mad_dashboard extends external_api {
     return lcfirst(implode('', $exploded_str_camel));
   }
 
-  private static function do_post_request($url, $body)
+  public static function do_post_request($url, $body, $courseId = null)
   {
     $apiKey = get_config('mad2api', 'api_key');
     $ch = curl_init();
@@ -444,6 +457,10 @@ class mad_dashboard extends external_api {
     curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
     $response = curl_exec($ch);
+
+    if (isset($courseId)) {
+      self::disable_course_if_not_found($ch, $courseId);
+    }
 
     curl_close($ch);
 
@@ -501,7 +518,7 @@ class mad_dashboard extends external_api {
 
   private static function get_url_for($path)
   {
-    $apiUrl = "https://api.lanse.com.br";
+    $apiUrl = "http://host.docker.internal:8080";
 
     return "{$apiUrl}/{$path}";
   }

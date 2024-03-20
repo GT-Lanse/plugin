@@ -43,11 +43,7 @@ class block_mad2api_observer {
   public static function new_event(\core\event\base $event) {
     global $DB;
 
-    $ch = curl_init();
-    $apiUrl = "https://api.lanse.com.br";
-
-    $url = "{$apiUrl}/api/v2/courses/{$event->courseid}/events";
-    $apiKey = get_config('mad2api', 'api_key');
+    $url = "api/v2/courses/{$event->courseid}/events";
 
     $data = array(
       'event_name' => $event->eventname,
@@ -63,18 +59,6 @@ class block_mad2api_observer {
       'time_created' => $event->timecreated
     );
 
-    $headers = [
-      'accept: application/json',
-      'Content-Type: application/json',
-      "API-KEY: {$apiKey}"
-    ];
-
-    curl_setopt($ch, CURLOPT_URL, $url);
-    curl_setopt($ch, CURLOPT_POST, 1);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));  //Post Fields
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-    curl_exec($ch);
-    curl_close($ch);
+    \block_mad2api\mad_dashboard::do_post_request($url, $data, $event->courseid);
   }
 }
