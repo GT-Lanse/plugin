@@ -16,7 +16,7 @@ class mad_check_resend_data extends \core\task\scheduled_task {
     );
 
     foreach ($records as $record) {
-      \block_mad2api\mad_dashboard::check_data_on_api($record->course_id)
+      \block_mad2api\mad_dashboard::check_data_on_api($record->course_id);
     }
   }
 }

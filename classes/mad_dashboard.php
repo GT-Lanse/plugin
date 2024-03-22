@@ -215,7 +215,7 @@ class mad_dashboard extends external_api {
     );
 
     $settings = array(
-      'pluginVersion' => get_config('block_mad2api')->version,
+      'pluginVersion' => \core_plugin_manager::instance()->get_plugin_info('block_mad2api')->release,
       'moodleVersion' => $CFG->release,
     );
 
@@ -227,7 +227,7 @@ class mad_dashboard extends external_api {
     global $CFG;
 
     $settings = array(
-      'pluginVersion' => get_config('block_mad2api')->version,
+      'pluginVersion' => \core_plugin_manager::instance()->get_plugin_info('block_mad2api')->release,
       'moodleVersion' => $CFG->release,
       'installationDate' => date('Y-m-d H:i:s')
     );
@@ -356,7 +356,7 @@ class mad_dashboard extends external_api {
 
     $resp = self::do_post_request("api/v2/authorize", $auth, $courseId);
 
-    return !!$resp ? $resp->data : array();
+    return isset($resp->data) ? $resp->data : array();
   }
 
   public static function get_course_students_count($courseId) {
@@ -424,12 +424,37 @@ class mad_dashboard extends external_api {
   }
 
   private static function disable_course_if_not_found($ch, $courseId) {
+    global $DB;
+
     $http_status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
-    if ($http_status == 404) {
-      self::disable($courseId);
+    if (in_array($http_status, [400, 404])) {
+      $resources = $DB->get_records(
+        "mad2api_dashboard_settings",
+        array('course_id' => $courseId, 'is_enabled' => true)
+      );
+
+      foreach ($resources as $resource) {
+        $data = array(
+          'id' => $resource->id,
+          'is_enabled' => false
+        );
+
+        $databaseResponse = $DB->update_record(
+          'mad2api_dashboard_settings', $data, false
+        );
+      }
     }
-  },
+  }
+
+  private static function is_course_enabled($courseId) {
+    global $DB;
+
+    !!$DB->get_record(
+      "mad2api_dashboard_settings",
+      array('course_id' => $courseId, 'is_enabled' => true)
+    );
+  }
 
   private static function convertToCamel($str, $delim) {
     $exploded_str = explode($delim, $str);
@@ -440,6 +465,10 @@ class mad_dashboard extends external_api {
 
   public static function do_post_request($url, $body, $courseId = null)
   {
+    if ($courseId && self::is_course_enabled($courseId)) {
+      return array();
+    }
+
     $apiKey = get_config('mad2api', 'api_key');
     $ch = curl_init();
 

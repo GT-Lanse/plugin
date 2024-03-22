@@ -7,6 +7,8 @@
 
     $dbman = $DB->get_manager();
 
+    \block_mad2api\mad_dashboard::api_installation_call();
+
     if ($oldversion < 2017011409) {
        // Define table mad2api_api_settings to be created.
        $table = new xmldb_table('mad2api_api_settings');

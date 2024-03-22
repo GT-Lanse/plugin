@@ -24,6 +24,7 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2024020507;
+$plugin->version   = 2024020516;
+$plugin->release = 'v0.2.0';
 $plugin->requires  = 2012112900;        // Requires this Moodle version
 $plugin->component = 'block_mad2api'; // Full name of the plugin (used for diagnostics)
