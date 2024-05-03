@@ -35,7 +35,7 @@ $observers = array(
 
   array(
     'eventname' => '\core\event\user_enrolment_created',
-    'callback'  => 'block_mad2api_observer::new_event',
+    'callback'  => 'block_mad2api_observer::new_user_enrolment_created',
     'internal'  => false,
     'priority'  => 1000,
   ),
@@ -269,5 +269,5 @@ $observers = array(
     'callback'  => 'block_mad2api_observer::new_event',
     'internal'  => false,
     'priority'  => 1000,
-  ),
+  )
 );

@@ -39,9 +39,13 @@ class block_mad2api_observer {
    * Sends the event to the mad2 API
    *
    * @param \core\event\base $event
-   */
+  */
   public static function new_event(\core\event\base $event) {
-    global $DB;
+    global $DB, $USER;
+
+    if (!isset($USER)) {
+      return;
+    }
 
     $url = "api/v2/courses/{$event->courseid}/events";
 
@@ -57,6 +61,39 @@ class block_mad2api_observer {
       "context_id" => $event->contextid,
       'raw_data' => \block_mad2api\mad_dashboard::camelizeObject($event),
       'time_created' => $event->timecreated
+    );
+
+    \block_mad2api\mad_dashboard::do_post_request($url, $data, $event->courseid);
+  }
+
+  /**
+   * Sends the user enrollment event to the mad2 API
+   *
+   * @param \core\event\base $event
+  */
+  public static function new_user_enrolment_created(\core\event\base $event) {
+    global $DB, $USER;
+
+    if (!isset($USER)) {
+      return;
+    }
+
+    $url = "api/v2/courses/{$event->courseid}/events";
+
+    $data = array(
+      'event_name' => $event->eventname,
+      'component' => $event->component,
+      'target' => $event->target,
+      'action' => $event->action,
+      'course_id' => $event->courseid,
+      'moodle_related_user_id' => $event->relateduserid,
+      'moodle_user_id' => $event->userid,
+      "context_id" => $event->contextid,
+      'raw_data' => \block_mad2api\mad_dashboard::camelizeObject($event),
+      'time_created' => $event->timecreated,
+      'other' => \block_mad2api\mad_dashboard::get_course_student(
+        $event->courseid, $event->relateduserid
+      )
     );
 
     \block_mad2api\mad_dashboard::do_post_request($url, $data, $event->courseid);

@@ -152,9 +152,12 @@ class mad_dashboard extends external_api {
   {
     global $DB;
 
-    $courseLog = $DB->get_record(
+    $lastCourseLog = array_slice($DB->get_records(
       "mad2api_course_logs", array('course_id' => $courseId, 'status' => 'done')
-    );
+    ), -1);
+
+
+    $courseLog = !empty($lastCourseLog) ? $lastCourseLog[0] : null;
 
     if (!$courseLog) {
       return;
@@ -314,7 +317,7 @@ class mad_dashboard extends external_api {
       JOIN mdl_role_assignments B
       JOIN mdl_course mc on mc.id = m.courseid
       JOIN mdl_user mu on mu.id = m.userid
-      WHERE B.roleid = 5 AND m.courseid = {$courseId} AND B.userid = m.userid
+      WHERE m.courseid = {$courseId} AND B.userid = m.userid
     ";
     $count = $DB->count_records_sql($countSql);
     $perPage = 20;
@@ -323,17 +326,12 @@ class mad_dashboard extends external_api {
     for ($currentPage = 1; $currentPage <= $endPage; $currentPage++) {
       $offset = ($currentPage - 1) * $perPage;
       $logs_query = "
-        SELECT  m.id AS id,
-                FROM_UNIXTIME(m.timecreated) AS hour,
-                CONCAT(mu.firstname, ' ',mu.lastname) AS name,
-                m.userid AS userId,
-                m.check_data_on_apiname AS context,
-                m.component AS component
+        SELECT  m.*
         FROM mdl_logstore_standard_log m
         JOIN mdl_role_assignments B
         JOIN mdl_course mc on mc.id = m.courseid
         JOIN mdl_user mu on mu.id = m.userid
-        WHERE B.roleid = 5 AND m.courseid = {$courseId} AND B.userid = m.userid
+        WHERE m.courseid = {$courseId} AND B.userid = m.userid
         GROUP BY m.id
         LIMIT {$perPage} OFFSET {$offset}
       ";
@@ -397,6 +395,30 @@ class mad_dashboard extends external_api {
     ");
 
     return self::camelizeArray($students);
+  }
+
+  public static function get_course_student($courseId, $studentId) {
+    global $DB;
+
+    $student = $DB->get_record_sql("
+      SELECT u.id AS student_id, u.email,
+      u.firstname AS first_name, u.lastname AS last_name,
+      (CASE WHEN lastaccess = '0' THEN 'false' ELSE 'true' END) AS logged_in,
+      AVG(g.rawgrade) AS current_grade
+      FROM {course} c
+      JOIN {context} ct ON c.id = ct.instanceid
+      JOIN {role_assignments} ra ON ra.contextid = ct.id
+      JOIN {user} u ON u.id = ra.userid
+      JOIN {role} r ON r.id = ra.roleid
+      LEFT JOIN {grade_grades} g ON g.userid = ra.userid AND g.itemid IN (
+        SELECT gi.id
+        FROM {grade_items} gi
+        WHERE gi.courseid = {$courseId}
+      )
+      WHERE c.id = {$courseId} AND r.id = 5 AND u.id = {$studentId}
+    ");
+
+    return self::camelizeObject($student);
   }
 
   public static function camelizeObject($obj) {
@@ -465,7 +487,7 @@ class mad_dashboard extends external_api {
 
   public static function do_post_request($url, $body, $courseId = null)
   {
-    if ($courseId && self::is_course_enabled($courseId)) {
+    if (!$courseId || !self::is_course_enabled($courseId)) {
       return array();
     }
 
