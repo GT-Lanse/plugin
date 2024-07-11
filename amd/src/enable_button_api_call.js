@@ -1,14 +1,13 @@
-define(['jquery', 'core/ajax', 'core/notification', 'core/modal_factory', 'core/str'],
-  function($, ajax, notification, ModalFactory, str) {
+define(['jquery', 'core/ajax', 'core/notification', 'core/str'],
+  function($, ajax, notification, str) {
     return {
-      init: courseId => {
+      init: (courseId, version) => {
         $('#enable-settings').click(event => {
           event.preventDefault();
 
           const args = {};
           args.courseId = courseId;
 
-          console.log('test');
           const request = {
             methodname: 'block_mad2api_enable_course',
             args: args
@@ -19,17 +18,22 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/modal_factory', 'core/
           promise.done(response => {
             const body = response[0];
 
-            console.log(body);
-
             if (body.error) {
               str.get_strings([
                 { key: 'error_modal_title', component: 'block_mad2api' },
-                { key: 'error_modal_body', component: 'block_mad2api' }
+                { key: 'error_modal_body', component: 'block_mad2api' },
+                { key: 'error_alert_body', component: 'block_mad2api' }
               ]).done(function(strs) {
-                ModalFactory.create({
-                  title: strs[0],
-                  body: strs[1]
-                }).then(modal => { modal.show(); });
+                if (version > 2016120500) {
+                  require(['core/modal_factory'], (ModalFactory) => {
+                    ModalFactory.create({
+                      title: strs[0],
+                      body: strs[1]
+                    }).then(modal => { modal.show(); });
+                  })
+                } else {
+                  alert(strs[2]);
+                }
               });
 
               return;

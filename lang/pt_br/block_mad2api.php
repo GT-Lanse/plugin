@@ -16,7 +16,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Strings for component 'block_mad2api', language 'en'
+ * Strings for component 'block_mad2api', language 'pt_br'
  *
  * @package   block_mad2api
  * @copyright Daniel Neis <danielneis@gmail.com>
@@ -32,11 +32,13 @@ $string['mad2api:addinstance'] = 'Adicionar Mad2api';
 $string['mad2api:myaddinstance'] = 'Adicionar Mad2api to my moodle';
 $string['pluginname'] = 'Dashboard LANSE';
 $string['error_modal_title'] = 'Erro ao habilitar curso';
-$string['access_dashboard'] = 'Acessar Dashboard';
-$string['enable_dashboard'] = 'Habilitar Dashboard';
-$string['disable_dashboard'] = 'Desabilitar Dashboard';
+$string['access_dashboard'] = 'Acessar a dashboard';
+$string['enable_dashboard'] = 'Habilitar monitoramento do curso';
+$string['disable_dashboard'] = 'Desabilitar monitoramento do curso';
+$string['not_teacher'] = 'Para acessar o dashboard, você precisa ser professor do curso.';
 $string['error_modal_body'] = "
   <p>
     Por favor, verifique se o curso que você está tentando habilitar possui as datas de início e término configuradas corretamente. Se o problema persistir, entre em contato conosco em: <b>suporte.lanse@gmail.com</b>. Obrigado!
   </p>
 ";
+$string['error_alert_body'] = 'Por favor, verifique se o curso que você está tentando habilitar possui as datas de início e término configuradas corretamente. Se o problema persistir, entre em contato conosco em: suporte.lanse@gmail.com. Obrigado!';

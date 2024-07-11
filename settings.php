@@ -24,6 +24,16 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+global $DB;
+
+$roles = $DB->get_records('role');
+$roleOptions = array();
+
+foreach ($roles as $role) {
+    $role_name = role_get_name($role);
+    $options[$role->id] = $role_name;
+}
+
 $settings->add(new admin_setting_heading('sampleheader',
                                          get_string('headerconfig', 'block_mad2api'),
                                          get_string('descconfig', 'block_mad2api')));
@@ -49,3 +59,19 @@ $apiKey->set_updatedcallback(function () {
 });
 
 $settings->add($apiKey);
+
+$settings->add(new admin_setting_configmultiselect(
+  'mad2api/roles',
+  'Usuários do Plugin LANSE',
+  'Usuários que terão acesso ao Plugin',
+  array(4, 3),
+  $options
+));
+
+$settings->add(new admin_setting_configselect(
+  'mad2api/studentRole',
+  'Selecione o papel de estudante no Plugin LANSE',
+  'Esse papel será utilizado para identificar os estudantes no Plugin',
+  5,
+  $options
+));

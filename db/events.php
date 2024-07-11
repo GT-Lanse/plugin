@@ -243,20 +243,6 @@ $observers = array(
     'priority'  => 1000,
   ),
 
-  // scorm
-  array(
-    'eventname' => '\mod_scorm\event\scoreraw_submitted',
-    'callback'  => 'block_mad2api_observer::new_event',
-    'internal'  => false,
-    'priority'  => 1000,
-  ),
-  array(
-    'eventname' => '\mod_scorm\event\course_module_viewed',
-    'callback'  => 'block_mad2api_observer::new_event',
-    'internal'  => false,
-    'priority'  => 1000,
-  ),
-
   // lesson
   array(
     'eventname' => '\mod_lesson\event\question_answered',

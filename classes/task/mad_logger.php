@@ -18,7 +18,7 @@ class mad_logger extends \core\task\scheduled_task {
    * Execute the task.
    */
   public function execute() {
-    global $DB;
+    global $DB, $CFG;
 
     $records = $DB->get_records('mad2api_course_logs', array('status' => 'todo'));
 
@@ -30,10 +30,19 @@ class mad_logger extends \core\task\scheduled_task {
         'status' => 'wip'
       );
 
+      echo("Sending data from course #" . $record->course_id . "\n");
+
       $DB->update_record('mad2api_course_logs', $data);
 
+      echo("course log updated to wip \n");
+
+      echo("sending students \n");
       \block_mad2api\mad_dashboard::api_send_students($record->course_id);
+
+      echo("sending logs \n");
       \block_mad2api\mad_dashboard::api_send_logs($record->course_id);
+
+      echo("course logs sent \n");
 
       $data = array(
         'id' => $record->id,

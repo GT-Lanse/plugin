@@ -43,18 +43,20 @@ class block_mad2api_observer {
   public static function new_event(\core\event\base $event) {
     global $DB, $USER;
 
-    if (!isset($USER)) {
+    $courseId = $event->courseid;
+
+    if (!isset($USER) || !isset($courseId) || !\block_mad2api\mad_dashboard::is_course_enabled($courseId)) {
       return;
     }
 
-    $url = "api/v2/courses/{$event->courseid}/events";
+    $url = "api/v2/courses/{$courseId}/events";
 
     $data = array(
       'event_name' => $event->eventname,
       'component' => $event->component,
       'target' => $event->target,
       'action' => $event->action,
-      'course_id' => $event->courseid,
+      'course_id' => $courseId,
       'moodle_related_user_id' => $event->relateduserid,
       'moodle_user_id' => $event->userid,
       'other' => $event->other,
@@ -63,7 +65,7 @@ class block_mad2api_observer {
       'time_created' => $event->timecreated
     );
 
-    \block_mad2api\mad_dashboard::do_post_request($url, $data, $event->courseid);
+    \block_mad2api\mad_dashboard::do_post_request($url, $data, $courseId);
   }
 
   /**
@@ -74,28 +76,30 @@ class block_mad2api_observer {
   public static function new_user_enrolment_created(\core\event\base $event) {
     global $DB, $USER;
 
-    if (!isset($USER)) {
+    $courseId = $event->courseid;
+
+    if (!isset($USER) || !isset($courseId) || !\block_mad2api\mad_dashboard::is_course_enabled($courseId)) {
       return;
     }
 
-    $url = "api/v2/courses/{$event->courseid}/events";
+    $url = "api/v2/courses/{$courseId}/events";
 
     $data = array(
       'event_name' => $event->eventname,
       'component' => $event->component,
       'target' => $event->target,
       'action' => $event->action,
-      'course_id' => $event->courseid,
+      'course_id' => $courseId,
       'moodle_related_user_id' => $event->relateduserid,
       'moodle_user_id' => $event->userid,
       "context_id" => $event->contextid,
       'raw_data' => \block_mad2api\mad_dashboard::camelizeObject($event),
       'time_created' => $event->timecreated,
       'other' => \block_mad2api\mad_dashboard::get_course_student(
-        $event->courseid, $event->relateduserid
+        $courseId, $event->relateduserid
       )
     );
 
-    \block_mad2api\mad_dashboard::do_post_request($url, $data, $event->courseid);
+    \block_mad2api\mad_dashboard::do_post_request($url, $data, $courseId);
   }
 }

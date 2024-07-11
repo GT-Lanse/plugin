@@ -39,6 +39,41 @@
       $DB->insert_record('mad2api_api_settings', $params, false);
     }
 
+    if ($oldversion < 2024020532) {
+      $dashboardSettings = $DB->get_records(
+        "mad2api_dashboard_settings", array('is_enabled' => 1)
+      );
+
+      foreach ($dashboardSettings as $dashboardSetting) {
+        $courseLog = $DB->get_record(
+          "mad2api_course_logs", array('course_id' => $dashboardSetting->course_id)
+        );
+
+        if (!isset($courseLog->id)) {
+          $params = array(
+            'course_id' => $dashboardSetting->course_id,
+            'status' => 'todo',
+            'created_at' => date('Y-m-d H:i:s'),
+            'updated_at' => date('Y-m-d H:i:s')
+          );
+
+          $DB->insert_record('mad2api_course_logs', $params, false);
+        }
+      }
+    }
+
+    if ($oldversion < 2024020551) {
+      $dashboardSettings = $DB->get_records(
+        "mad2api_dashboard_settings", array('is_enabled' => 1)
+      );
+
+      foreach ($dashboardSettings as $dashboardSetting) {
+        \block_mad2api\mad_dashboard::api_send_students(
+          $dashboardSetting->course_id
+        );
+      }
+    }
+
     if (!!$DB->get_record("mad2api_api_settings", array())) {
       return true;
     }

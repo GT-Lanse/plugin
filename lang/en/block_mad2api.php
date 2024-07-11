@@ -32,11 +32,13 @@ $string['mad2api:addinstance'] = 'Add mad2api block';
 $string['mad2api:myaddinstance'] = 'Add mad2api block to my moodle';
 $string['pluginname'] = 'Dashboard LANSE';
 $string['error_modal_title'] = 'Error on enabling course';
-$string['access_dashboard'] = 'Access Dashboard';
-$string['enable_dashboard'] = 'Enable Dashboard';
-$string['disable_dashboard'] = 'Disable Dashboard';
+$string['access_dashboard'] = 'Access the dashboard';
+$string['enable_dashboard'] = 'Enable course monitoring';
+$string['disable_dashboard'] = 'Disable course monitoring';
+$string['not_teacher'] = 'To access the Dashboard, you need to be a teacher of the course.';
 $string['error_modal_body'] = "
   <p>
     Please ensure that the course you are trying to enable has start date and end date configured correctly. If the problem persists, please contact us at: <b>suporte.lanse@gmail.com</b>. Thank you!
   </p>
 ";
+$string['error_alert_body'] = 'Please ensure that the course you are trying to enable has start date and end date configured correctly. If the problem persists, please contact us at: suporte.lanse@gmail.com. Thank you!';

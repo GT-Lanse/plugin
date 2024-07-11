@@ -14,13 +14,15 @@ use external_multiple_structure;
 class mad_dashboard extends external_api {
   function __construct(){}
 
-  public static function enable_parameters() {
+  public static function enable_parameters()
+  {
     return new external_function_parameters([
       'courseId' => new external_value(PARAM_INT, 'Course id', VALUE_DEFAULT, 0),
     ]);
   }
 
-  public static function enable_returns() {
+  public static function enable_returns()
+  {
     return new external_multiple_structure(
       new external_single_structure(
         array(
@@ -81,33 +83,35 @@ class mad_dashboard extends external_api {
       $databaseResponse = $DB->update_record('mad2api_dashboard_settings', $recordDashboardSettings, false);
     } else {
       $databaseResponse = $DB->insert_record('mad2api_dashboard_settings', $recordDashboardSettings, false);
+    }
 
-      $recordCourseLogs = array(
-        'created_at' => date('Y-m-d H:i:s'),
-        'updated_at' => date('Y-m-d H:i:s'),
-        'course_id'  => intval($params['courseId']),
-        'status'     => 'todo'
-      );
+    $recordCourseLogs = array(
+      'created_at' => date('Y-m-d H:i:s'),
+      'updated_at' => date('Y-m-d H:i:s'),
+      'course_id'  => intval($params['courseId']),
+      'status'     => 'todo'
+    );
 
-      $courseLog = $DB->get_record(
-        "mad2api_course_logs", array('course_id' => $courseId)
-      );
+    $courseLog = $DB->get_record(
+      "mad2api_course_logs", array('course_id' => $courseId)
+    );
 
-      if (!isset($courseLog)) {
-        $DB->insert_record('mad2api_course_logs', $recordCourseLogs, false);
-      }
+    if (!isset($courseLog->id)) {
+      $DB->insert_record('mad2api_course_logs', $recordCourseLogs, false);
     }
 
     return array(['enabled' => $databaseResponse, 'url' => $response->url, 'error' => false ]);
   }
 
-  public static function disable_parameters() {
+  public static function disable_parameters()
+  {
     return new external_function_parameters([
       'courseId' => new external_value(PARAM_INT, 'Course id', VALUE_DEFAULT, 0),
     ]);
   }
 
-  public static function disable_returns() {
+  public static function disable_returns()
+  {
     return new external_multiple_structure(
       new external_single_structure(
         array(
@@ -156,7 +160,6 @@ class mad_dashboard extends external_api {
       "mad2api_course_logs", array('course_id' => $courseId, 'status' => 'done')
     ), -1);
 
-
     $courseLog = !empty($lastCourseLog) ? $lastCourseLog[0] : null;
 
     if (!$courseLog) {
@@ -165,7 +168,7 @@ class mad_dashboard extends external_api {
 
     $response = self::api_check_course_data($courseId);
 
-    if ($response != null && $response->resend_data) {
+    if ($response != null && isset($response->resend_data) && $response->resend_data) {
       $updatedAttributes = array(
         'id' => $courseLog->id,
         'status' => 'todo',
@@ -178,27 +181,31 @@ class mad_dashboard extends external_api {
     }
   }
 
-  public static function is_current_user_course_teacher($contextid) {
+  public static function is_current_user_course_teacher($contextid)
+  {
     global $USER;
 
-    $is_teacher = false;
+    $isPermitted = false;
+    $permittedRoles = explode(',', get_config('mad2api', 'roles'));
 
     foreach (self::get_user_roles($USER->id, $contextid) as $user_role) {
-      if ($user_role->roleid == 4 || $user_role->roleid == 3) {
-        $is_teacher = true;
+      if (in_array($user_role->roleid, $permittedRoles)) {
+        $isPermitted = true;
       }
     }
 
-    return $is_teacher;
+    return $isPermitted;
   }
 
-  public static function get_user_roles($userid, $contextid) {
+  public static function get_user_roles($userid, $contextid)
+  {
     global $DB;
 
     return $DB->get_records('role_assignments', array('contextid' => $contextid, 'userid' => $userid));
   }
 
-  private static function send_settings_to_api() {
+  private static function send_settings_to_api()
+  {
     global $DB;
 
     $apiSetting = $DB->get_records("mad2api_api_settings")[0];
@@ -238,7 +245,8 @@ class mad_dashboard extends external_api {
     self::do_put_request("api/v2/settings/organizations/", $settings);
   }
 
-  public static function api_enable_call($courseId) {
+  public static function api_enable_call($courseId)
+  {
     global $USER, $DB;
 
     $course = $DB->get_record('course', ['id' => $courseId]);
@@ -270,11 +278,13 @@ class mad_dashboard extends external_api {
     return $resp->data;
   }
 
-  public static function api_check_course_data($courseId) {
+  public static function api_check_course_data($courseId)
+  {
     return self::do_get_request("api/v2/plugin/courses/{$courseId}/resend_data");
   }
 
-  public static function api_send_students($courseId) {
+  public static function api_send_students($courseId)
+  {
     global $DB;
 
     $courseLog = $DB->get_record(
@@ -289,6 +299,8 @@ class mad_dashboard extends external_api {
     $perPage = 20;
     $endPage = ceil($count / $perPage);
 
+    echo("Total students: " . $count . "\n");
+
     for ($currentPage = 1; $currentPage <= $endPage; $currentPage++) {
       $offset = ($currentPage - 1) * $perPage;
 
@@ -300,8 +312,9 @@ class mad_dashboard extends external_api {
     }
   }
 
-  public static function api_send_logs($courseId) {
-    global $DB;
+  public static function api_send_logs($courseId)
+  {
+    global $DB, $CFG;
 
     $courseLog = $DB->get_record(
       "mad2api_course_logs", array('course_id' => $courseId, 'status' => 'done')
@@ -313,10 +326,10 @@ class mad_dashboard extends external_api {
 
     $countSql = "
       SELECT  COUNT(*)
-      FROM mdl_logstore_standard_log m
-      JOIN mdl_role_assignments B
-      JOIN mdl_course mc on mc.id = m.courseid
-      JOIN mdl_user mu on mu.id = m.userid
+      FROM {$CFG->prefix}logstore_standard_log m
+      JOIN {$CFG->prefix}role_assignments B
+      JOIN {$CFG->prefix}course mc on mc.id = m.courseid
+      JOIN {$CFG->prefix}user mu on mu.id = m.userid
       WHERE m.courseid = {$courseId} AND B.userid = m.userid
     ";
     $count = $DB->count_records_sql($countSql);
@@ -327,10 +340,10 @@ class mad_dashboard extends external_api {
       $offset = ($currentPage - 1) * $perPage;
       $logs_query = "
         SELECT  m.*
-        FROM mdl_logstore_standard_log m
-        JOIN mdl_role_assignments B
-        JOIN mdl_course mc on mc.id = m.courseid
-        JOIN mdl_user mu on mu.id = m.userid
+        FROM {$CFG->prefix}logstore_standard_log m
+        JOIN {$CFG->prefix}role_assignments B
+        JOIN {$CFG->prefix}course mc on mc.id = m.courseid
+        JOIN {$CFG->prefix}user mu on mu.id = m.userid
         WHERE m.courseid = {$courseId} AND B.userid = m.userid
         GROUP BY m.id
         LIMIT {$perPage} OFFSET {$offset}
@@ -344,7 +357,8 @@ class mad_dashboard extends external_api {
     }
   }
 
-  public static function api_dashboard_auth_url($courseId){
+  public static function api_dashboard_auth_url($courseId)
+  {
     global $USER, $DB;
 
     $auth = array(
@@ -357,8 +371,13 @@ class mad_dashboard extends external_api {
     return isset($resp->data) ? $resp->data : array();
   }
 
-  public static function get_course_students_count($courseId) {
+  public static function get_course_students_count($courseId)
+  {
     global $DB;
+
+    $studentRole = get_config('mad2api', 'studentRole');
+
+    echo("student role: " . $studentRole . "\n");
 
     return $DB->count_records_sql("
       SELECT  COUNT(*)
@@ -367,12 +386,15 @@ class mad_dashboard extends external_api {
       JOIN {role_assignments} ra ON ra.contextid = ct.id
       JOIN {user} u ON u.id = ra.userid
       JOIN {role} r ON r.id = ra.roleid
-      where c.id = {$courseId} AND r.id = 5
+      where c.id = {$courseId} AND r.id = {$studentRole}
     ");
   }
 
-  public static function get_course_students($courseId, $perPage, $offset) {
+  public static function get_course_students($courseId, $perPage, $offset)
+  {
     global $DB;
+
+    $studentRole = get_config('mad2api', 'studentRole');
 
     $students = $DB->get_records_sql("
       SELECT u.id AS student_id, u.email,
@@ -389,7 +411,7 @@ class mad_dashboard extends external_api {
         FROM {grade_items} gi
         WHERE gi.courseid = {$courseId}
       )
-      WHERE c.id = {$courseId} AND r.id = 5
+      WHERE c.id = {$courseId} AND r.id = {$studentRole}
       GROUP BY u.id
       LIMIT {$perPage} OFFSET {$offset}
     ");
@@ -397,8 +419,11 @@ class mad_dashboard extends external_api {
     return self::camelizeArray($students);
   }
 
-  public static function get_course_student($courseId, $studentId) {
+  public static function get_course_student($courseId, $studentId)
+  {
     global $DB;
+
+    $studentRole = get_config('mad2api', 'studentRole');
 
     $student = $DB->get_record_sql("
       SELECT u.id AS student_id, u.email,
@@ -415,13 +440,14 @@ class mad_dashboard extends external_api {
         FROM {grade_items} gi
         WHERE gi.courseid = {$courseId}
       )
-      WHERE c.id = {$courseId} AND r.id = 5 AND u.id = {$studentId}
+      WHERE c.id = {$courseId} AND r.id = {$studentRole} AND u.id = {$studentId}
     ");
 
     return self::camelizeObject($student);
   }
 
-  public static function camelizeObject($obj) {
+  public static function camelizeObject($obj)
+  {
     $new_obj = array();
 
     if (gettype($obj) == 'boolean') {
@@ -435,7 +461,8 @@ class mad_dashboard extends external_api {
     return $new_obj;
   }
 
-  public static function camelizeArray($array) {
+  public static function camelizeArray($array)
+  {
     $formattedArray = [];
 
     foreach ($array as $item) {
@@ -445,7 +472,8 @@ class mad_dashboard extends external_api {
     return $formattedArray;
   }
 
-  private static function disable_course_if_not_found($ch, $courseId) {
+  private static function disable_course_if_not_found($ch, $courseId)
+  {
     global $DB;
 
     $http_status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -469,28 +497,26 @@ class mad_dashboard extends external_api {
     }
   }
 
-  private static function is_course_enabled($courseId) {
-    global $DB;
-
-    !!$DB->get_record(
-      "mad2api_dashboard_settings",
-      array('course_id' => $courseId, 'is_enabled' => true)
-    );
-  }
-
-  private static function convertToCamel($str, $delim) {
+  private static function convertToCamel($str, $delim)
+  {
     $exploded_str = explode($delim, $str);
     $exploded_str_camel = array_map('ucwords', $exploded_str);
 
     return lcfirst(implode('', $exploded_str_camel));
   }
 
+  public static function is_course_enabled($courseId)
+  {
+    global $DB;
+
+    return !!$DB->get_record(
+      "mad2api_dashboard_settings",
+      array('course_id' => $courseId, 'is_enabled' => true)
+    );
+  }
+
   public static function do_post_request($url, $body, $courseId = null)
   {
-    if (!$courseId || !self::is_course_enabled($courseId)) {
-      return array();
-    }
-
     $apiKey = get_config('mad2api', 'api_key');
     $ch = curl_init();
 
@@ -569,7 +595,8 @@ class mad_dashboard extends external_api {
 
   private static function get_url_for($path)
   {
-    $apiUrl = "http://host.docker.internal:8080";
+    // $apiUrl = "http://host.docker.internal:8080";
+    $apiUrl = "https://api.lanse.com.br";
 
     return "{$apiUrl}/{$path}";
   }
