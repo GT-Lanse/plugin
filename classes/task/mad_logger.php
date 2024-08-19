@@ -20,7 +20,10 @@ class mad_logger extends \core\task\scheduled_task {
   public function execute() {
     global $DB, $CFG;
 
-    $records = $DB->get_records('mad2api_course_logs', array('status' => 'todo'));
+    $records = $DB->get_records_select(
+      'mad2api_course_logs',
+      "status = 'todo' OR status = 'wip'"
+    );
 
     foreach ($records as $record) {
       $data = array(

@@ -172,6 +172,8 @@ class mad_dashboard extends external_api {
       $updatedAttributes = array(
         'id' => $courseLog->id,
         'status' => 'todo',
+        'students_sent' => 1,
+        'last_log_page' => 1,
         'updated_at' => date('Y-m-d H:i:s')
       );
 
@@ -288,7 +290,7 @@ class mad_dashboard extends external_api {
     global $DB;
 
     $courseLog = $DB->get_record(
-      "mad2api_course_logs", array('course_id' => $courseId, 'status' => 'done')
+      "mad2api_course_logs", array('course_id' => $courseId, 'students_sent' => 1)
     );
 
     if (!!$courseLog) {
@@ -299,8 +301,6 @@ class mad_dashboard extends external_api {
     $perPage = 20;
     $endPage = ceil($count / $perPage);
 
-    echo("Total students: " . $count . "\n");
-
     for ($currentPage = 1; $currentPage <= $endPage; $currentPage++) {
       $offset = ($currentPage - 1) * $perPage;
 
@@ -310,6 +310,20 @@ class mad_dashboard extends external_api {
 
       self::do_post_request("api/v2/courses/${courseId}/students/batch", $data, $courseId);
     }
+
+    $courseLog = $DB->get_record(
+      "mad2api_course_logs", array('course_id' => $courseId)
+    );
+
+    $updatedAttributes = array(
+      'id' => $courseLog->id,
+      'students_sent' => 1,
+      'updated_at' => date('Y-m-d H:i:s')
+    );
+
+    $DB->update_record(
+      'mad2api_course_logs', $updatedAttributes, false
+    );
   }
 
   public static function api_send_logs($courseId)
@@ -324,31 +338,40 @@ class mad_dashboard extends external_api {
       return;
     }
 
+    $courseLog = $DB->get_record(
+      "mad2api_course_logs", array('course_id' => $courseId)
+    );
+
     $countSql = "
-      SELECT  COUNT(*)
+      SELECT COUNT(DISTINCT m.id)
       FROM {$CFG->prefix}logstore_standard_log m
-      JOIN {$CFG->prefix}role_assignments B
-      JOIN {$CFG->prefix}course mc on mc.id = m.courseid
-      JOIN {$CFG->prefix}user mu on mu.id = m.userid
-      WHERE m.courseid = {$courseId} AND B.userid = m.userid
+      WHERE m.courseid = {$courseId}
     ";
     $count = $DB->count_records_sql($countSql);
-    $perPage = 20;
+    $perPage = 100;
     $endPage = ceil($count / $perPage);
 
-    for ($currentPage = 1; $currentPage <= $endPage; $currentPage++) {
+    for ($currentPage = $courseLog->last_log_page; $currentPage <= $endPage; $currentPage++) {
+      $updatedAttributes = array(
+        'id' => $courseLog->id,
+        'last_log_page' => $currentPage,
+        'updated_at' => date('Y-m-d H:i:s')
+      );
+
+      $DB->update_record(
+        'mad2api_course_logs', $updatedAttributes, false
+      );
+
       $offset = ($currentPage - 1) * $perPage;
       $logs_query = "
-        SELECT  m.*
+        SELECT m.*
         FROM {$CFG->prefix}logstore_standard_log m
-        JOIN {$CFG->prefix}role_assignments B
-        JOIN {$CFG->prefix}course mc on mc.id = m.courseid
-        JOIN {$CFG->prefix}user mu on mu.id = m.userid
-        WHERE m.courseid = {$courseId} AND B.userid = m.userid
+        INNER JOIN {$CFG->prefix}role_assignments ra ON ra.userid = m.userid
+        INNER JOIN {$CFG->prefix}course mc ON mc.id = m.courseid
+        WHERE m.courseid = {$courseId}
         GROUP BY m.id
         LIMIT {$perPage} OFFSET {$offset}
       ";
-
       $data = array(
         'logs' => $DB->get_records_sql($logs_query)
       );
@@ -376,8 +399,6 @@ class mad_dashboard extends external_api {
     global $DB;
 
     $studentRole = get_config('mad2api', 'studentRole');
-
-    echo("student role: " . $studentRole . "\n");
 
     return $DB->count_records_sql("
       SELECT  COUNT(*)

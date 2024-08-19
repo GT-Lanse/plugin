@@ -38,6 +38,9 @@
         <FIELD NAME="updated_at" TYPE="char" LENGTH="50" NOTNULL="true" SEQUENCE="false"/>
         <FIELD NAME="course_id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
         <FIELD NAME="status" TYPE="char" LENGTH="4" NOTNULL="true" SEQUENCE="false"/>
+
+        <FIELD NAME="students_sent" TYPE="int" LENGTH="1" NOTNULL="false" SEQUENCE="false" DEFAULT="0"/>
+        <FIELD NAME="last_log_page" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" DEFAULT="1"/>
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>

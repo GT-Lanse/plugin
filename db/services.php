@@ -38,9 +38,18 @@ $functions = array(
     'classpath' => '',
     'classname'   => 'block_mad2api\mad_dashboard',
     'methodname'  => 'disable',
-    'description' => 'Enabling into the API the course monitoring.',
+    'description' => 'Disabling into the API the course monitoring.',
     'type'        => 'write',
     'ajax'        => true,
     'services'    => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
-  )
+  ),
+  'block_mad2api_load_course' => array(
+    'classpath' => '',
+    'classname'   => 'block_mad2api\mad_dashboard',
+    'methodname'  => 'load',
+    'description' => 'Loading course data on API.',
+    'type'        => 'write',
+    'ajax'        => true,
+    'services'    => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
+  ),
 );

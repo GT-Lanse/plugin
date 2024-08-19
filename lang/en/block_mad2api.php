@@ -35,6 +35,7 @@ $string['error_modal_title'] = 'Error on enabling course';
 $string['access_dashboard'] = 'Access the dashboard';
 $string['enable_dashboard'] = 'Enable course monitoring';
 $string['disable_dashboard'] = 'Disable course monitoring';
+$string['load_data'] = 'Load course data now';
 $string['not_teacher'] = 'To access the Dashboard, you need to be a teacher of the course.';
 $string['error_modal_body'] = "
   <p>

@@ -35,6 +35,7 @@ $string['error_modal_title'] = 'Erro ao habilitar curso';
 $string['access_dashboard'] = 'Acessar a dashboard';
 $string['enable_dashboard'] = 'Habilitar monitoramento do curso';
 $string['disable_dashboard'] = 'Desabilitar monitoramento do curso';
+$string['load_data'] = 'Carregar dados do curso agora';
 $string['not_teacher'] = 'Para acessar o dashboard, você precisa ser professor do curso.';
 $string['error_modal_body'] = "
   <p>
