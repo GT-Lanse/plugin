@@ -84,19 +84,21 @@ class block_mad2api_observer {
 
     $url = "api/v2/courses/{$courseId}/events";
 
+    $eventName = ($event->eventname == '\core\event\role_assigned') ? '\core\event\user_enrolment_created' : $event->eventname;
+
     $data = array(
-      'event_name' => $event->eventname,
+      'eventName' => $eventName,
       'component' => $event->component,
       'target' => $event->target,
       'action' => $event->action,
-      'course_id' => $courseId,
-      'moodle_related_user_id' => $event->relateduserid,
-      'moodle_user_id' => $event->userid,
-      "context_id" => $event->contextid,
-      'raw_data' => \block_mad2api\mad_dashboard::camelizeObject($event),
-      'time_created' => $event->timecreated,
-      'other' => \block_mad2api\mad_dashboard::get_course_student(
-        $courseId, $event->relateduserid
+      'courseId' => $courseId,
+      'moodleRelatedUserId' => $event->relateduserid,
+      'moodleUserId' => $event->userid,
+      "contextId" => $event->contextid,
+      'rawData' => \block_mad2api\mad_dashboard::camelizeObject($event),
+      'timeCreated' => $event->timecreated,
+      'other' => \block_mad2api\mad_dashboard::get_user(
+        $event->relateduserid, $courseId
       )
     );
 

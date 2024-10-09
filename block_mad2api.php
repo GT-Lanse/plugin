@@ -45,9 +45,8 @@ class block_mad2api extends block_base {
 
     $this->content = new stdClass();
 
-    $enabled = $DB->get_record(
-      "mad2api_dashboard_settings",
-      array('user_id' => $USER->id, 'course_id' => $COURSE->id, 'is_enabled' => 1)
+    $enabled = $DB->get_record("mad2api_dashboard_settings",
+      array('course_id' => $COURSE->id, 'is_enabled' => 1)
     );
 
     $PAGE->requires->js_call_amd('block_mad2api/enable_button_api_call', 'init', array($COURSE->id, $CFG->version));

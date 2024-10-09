@@ -4,13 +4,12 @@
   xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
 >
   <TABLES>
-    <TABLE NAME="mad2api_dashboard_settings" COMMENT="This table saves the user dashboard data">
+    <TABLE NAME="mad2api_dashboard_settings" COMMENT="This table saves the course dashboard data">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
         <FIELD NAME="created_at" TYPE="char" LENGTH="50" NOTNULL="true" SEQUENCE="false"/>
         <FIELD NAME="updated_at" TYPE="char" LENGTH="50" NOTNULL="true" SEQUENCE="false"/>
         <FIELD NAME="course_id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
-        <FIELD NAME="user_id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
         <FIELD NAME="token" TYPE="char" LENGTH="50" NOTNULL="false" SEQUENCE="false"/>
         <FIELD NAME="is_enabled" TYPE="int" LENGTH="2" NOTNULL="false" SEQUENCE="false"/>
       </FIELDS>

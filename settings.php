@@ -61,17 +61,25 @@ $apiKey->set_updatedcallback(function () {
 $settings->add($apiKey);
 
 $settings->add(new admin_setting_configmultiselect(
+  'mad2api/admin_roles',
+  'Perfil Coordenador na LANSE',
+  'Perfis que terão acesso ao Plugin como coordenador',
+  array(1),
+  $options
+));
+
+$settings->add(new admin_setting_configmultiselect(
   'mad2api/roles',
-  'Usuários do Plugin LANSE',
-  'Usuários que terão acesso ao Plugin',
+  'Perfil Professor/Tutor na LANSE',
+  'Perfis que terão acesso ao Plugin como professor/tutor',
   array(4, 3),
   $options
 ));
 
 $settings->add(new admin_setting_configselect(
   'mad2api/studentRole',
-  'Selecione o papel de estudante no Plugin LANSE',
-  'Esse papel será utilizado para identificar os estudantes no Plugin',
+  'Selecione o papel de estudante na LANSE',
+  'Perfil utilizado para identificar os estudantes no Plugin',
   5,
   $options
 ));

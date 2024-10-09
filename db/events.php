@@ -32,9 +32,8 @@ $observers = array(
     'internal'  => false,
     'priority'  => 1000,
   ),
-
   array(
-    'eventname' => '\core\event\user_enrolment_created',
+    'eventname' => '\core\event\role_assigned',
     'callback'  => 'block_mad2api_observer::new_user_enrolment_created',
     'internal'  => false,
     'priority'  => 1000,
@@ -67,6 +66,24 @@ $observers = array(
   ),
   array(
     'eventname' => '\core\event\course_module_deleted',
+    'callback'  => 'block_mad2api_observer::new_event',
+    'internal'  => false,
+    'priority'  => 1000,
+  ),
+  array(
+    'eventname' => '\core\event\course_section_deleted',
+    'callback'  => 'block_mad2api_observer::new_event',
+    'internal'  => false,
+    'priority'  => 1000,
+  ),
+  array(
+    'eventname' => '\core\event\course_content_deleted',
+    'callback'  => 'block_mad2api_observer::new_event',
+    'internal'  => false,
+    'priority'  => 1000,
+  ),
+  array(
+    'eventname' => '\\core\\event\\course_module_deleted',
     'callback'  => 'block_mad2api_observer::new_event',
     'internal'  => false,
     'priority'  => 1000,

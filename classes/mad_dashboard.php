@@ -45,8 +45,7 @@ class mad_dashboard extends external_api {
     );
 
     $dashboardSetting = $DB->get_record(
-      "mad2api_dashboard_settings",
-      array('user_id' => $USER->id, 'course_id' => $courseId)
+      "mad2api_dashboard_settings", array('course_id' => $courseId)
     );
 
     if (isset($dashboardSetting) && $dashboardSetting->is_enabled == 1) {
@@ -69,7 +68,6 @@ class mad_dashboard extends external_api {
     }
 
     $recordDashboardSettings = array(
-      'user_id' => $USER->id,
       'created_at' => date('Y-m-d H:i:s'),
       'updated_at' => date('Y-m-d H:i:s'),
       'course_id' => intval($params['courseId']),
@@ -132,7 +130,6 @@ class mad_dashboard extends external_api {
     );
 
     $data = array(
-      'user_id' => $USER->id,
       'course_id' => $courseId,
       'updated_at' => date('Y-m-d H:i:s'),
       'is_enabled' => 0
@@ -140,8 +137,7 @@ class mad_dashboard extends external_api {
 
     $databaseResponse = false;
     $dashboardSetting = $DB->get_record(
-      "mad2api_dashboard_settings",
-      ['user_id' => $USER->id, 'course_id' => $courseId]
+      "mad2api_dashboard_settings", array('course_id' => $courseId)
     );
 
     if (isset($dashboardSetting->id)) {
@@ -172,7 +168,7 @@ class mad_dashboard extends external_api {
       $updatedAttributes = array(
         'id' => $courseLog->id,
         'status' => 'todo',
-        'students_sent' => 1,
+        'students_sent' => 0,
         'last_log_page' => 1,
         'updated_at' => date('Y-m-d H:i:s')
       );
@@ -203,7 +199,9 @@ class mad_dashboard extends external_api {
   {
     global $DB;
 
-    return $DB->get_records('role_assignments', array('contextid' => $contextid, 'userid' => $userid));
+    return $DB->get_records(
+      'role_assignments', array('contextid' => $contextid, 'userid' => $userid)
+    );
   }
 
   private static function send_settings_to_api()
@@ -259,12 +257,8 @@ class mad_dashboard extends external_api {
         'endDate' => $course->enddate,
         'name' => $course->fullname
       ),
-      'teacher' => array(
-        'teacherId' => $USER->id,
-        'firstName' => $USER->firstname,
-        'lastName' => $USER->lastname,
-        'email' => $USER->email
-      )
+      'teachers' => get_course_teachers($courseId),
+      'coordinators' => get_course_coordinators($courseId)
     );
 
     $auth = array(
@@ -378,6 +372,100 @@ class mad_dashboard extends external_api {
 
       self::do_post_request("api/v2/courses/{$courseId}/logs/batch", $data, $courseId);
     }
+
+    self::send_original_course_logs($courseId);
+  }
+
+  public static function send_original_course_logs($courseId)
+  {
+    global $DB, $CFG, $USER;
+
+    $courseLog = $DB->get_record(
+      "logstore_standard_log",
+      array(
+        'courseid' => $courseId, 'eventname' => '\core\event\course_restored'
+      )
+    );
+
+    if (!$courseLog) {
+      return;
+    }
+
+    $formattedCourseLog = json_decode($courseLog->other);
+
+    $countSql = "
+      SELECT COUNT(DISTINCT cm.id)
+      FROM {$CFG->prefix}course_modules cm
+      WHERE cm.course = {$courseId}
+    ";
+
+    $count = $DB->count_records_sql($countSql);
+    $perPage = 25;
+    $endPage = ceil($count / $perPage);
+
+    $logs = array();
+
+    for ($currentPage = 1; $currentPage <= $endPage; $currentPage++) {
+      $offset = ($currentPage - 1) * $perPage;
+
+      $courseModuleQuery = "
+        SELECT cm.id AS course_module_id,
+              m.name AS module_type,
+              cm.instance,
+              cm.section
+        FROM mdl_course_modules cm
+        JOIN mdl_modules m ON cm.module = m.id
+        WHERE cm.course = {$courseId}
+        GROUP BY m.id
+        LIMIT {$perPage} OFFSET {$offset}
+      ";
+
+      $courseModules = $DB->get_records_sql($courseModuleQuery);
+
+      foreach ($courseModules as $courseModule) {
+        $tableName = $courseModule->module_type;
+        $instanceId = $courseModule->instance;
+
+        $instanceQuery = "
+          SELECT * FROM mdl_{$tableName} AS t WHERE t.id = {$instanceId}
+        ";
+
+        $instance = $DB->get_record_sql($instanceQuery);
+
+        $context = \context_module::instance($courseModule->course_module_id);
+
+        $logs[$context->id] = array(
+          'id' => 0,
+          'crud' => 'c',
+          'other' => json_encode(array(
+            'name' => $instance->name,
+            'instanceid' => $instanceId,
+            'modulename' => $tableName
+          )),
+          'action' => 'created',
+          'target' => 'course_module',
+          'courseid' => $courseId,
+          'userid' => $USER->id,
+          'objectid' => $context->instanceid,
+          'anonymous' => 0,
+          'component' => 'core',
+          'contextid' => $context->id,
+          'eventname' => '\core\event\course_module_created',
+          'objecttable' => 'course_modules',
+          'contextlevel' => $context->contextlevel,
+          'contextinstanceid' => $context->instanceid,
+          'timecreated' => $instance->timemodified
+        );
+      }
+
+      $data = array(
+        'logs' => $logs
+      );
+
+      self::do_post_request(
+        "api/v2/courses/{$courseId}/logs/batch", $data, $courseId
+      );
+    }
   }
 
   public static function api_dashboard_auth_url($courseId)
@@ -418,7 +506,7 @@ class mad_dashboard extends external_api {
     $studentRole = get_config('mad2api', 'studentRole');
 
     $students = $DB->get_records_sql("
-      SELECT u.id AS student_id, u.email,
+      SELECT u.id AS user_id, u.email,
       u.firstname AS first_name, u.lastname AS last_name,
       (CASE WHEN lastaccess = '0' THEN 'false' ELSE 'true' END) AS logged_in,
       AVG(g.rawgrade) AS current_grade
@@ -447,7 +535,7 @@ class mad_dashboard extends external_api {
     $studentRole = get_config('mad2api', 'studentRole');
 
     $student = $DB->get_record_sql("
-      SELECT u.id AS student_id, u.email,
+      SELECT u.id AS user_id, u.email,
       u.firstname AS first_name, u.lastname AS last_name,
       (CASE WHEN lastaccess = '0' THEN 'false' ELSE 'true' END) AS logged_in,
       AVG(g.rawgrade) AS current_grade
@@ -465,6 +553,73 @@ class mad_dashboard extends external_api {
     ");
 
     return self::camelizeObject($student);
+  }
+
+  public static function get_user($userId, $courseId)
+  {
+    global $DB;
+
+    $studentRole = get_config('mad2api', 'studentRole');
+
+    $user = $DB->get_record_sql("
+      SELECT u.id AS user_id, u.email,
+      u.firstname AS first_name, u.lastname AS last_name,
+      (CASE WHEN lastaccess = '0' THEN 'false' ELSE 'true' END) AS logged_in,
+      AVG(g.rawgrade) AS current_grade,
+      r.name AS moodle_role,
+      (CASE WHEN r.id = {$studentRole} THEN 'student' ELSE 'teacher' END) AS role
+      FROM {course} c
+      JOIN {context} ct ON c.id = ct.instanceid
+      JOIN {role_assignments} ra ON ra.contextid = ct.id
+      JOIN {user} u ON u.id = ra.userid
+      JOIN {role} r ON r.id = ra.roleid
+      LEFT JOIN {grade_grades} g ON g.userid = ra.userid AND g.itemid IN (
+        SELECT gi.id
+        FROM {grade_items} gi
+        WHERE gi.courseid = {$courseId}
+      )
+      WHERE c.id = {$courseId} AND u.id = {$userId}
+    ");
+
+    return self::camelizeObject($user);
+  }
+
+  public static function get_course_teachers($courseId)
+  {
+    global $DB;
+
+    $teacherRoles = get_config('mad2api', 'roles');
+
+    return $DB->get_records_sql("
+      SELECT u.id AS userId, u.email,
+      u.firstname AS firstName, u.lastname AS lastName,
+      r.name AS moodleRole
+      FROM {course} c
+      JOIN {context} ct ON c.id = ct.instanceid
+      JOIN {role_assignments} ra ON ra.contextid = ct.id
+      JOIN {user} u ON u.id = ra.userid
+      JOIN {role} r ON r.id = ra.roleid
+      WHERE c.id = {$courseId} AND r.id = {$teacherRoles}
+    ");
+  }
+
+  public static function get_course_coordinators($courseId)
+  {
+    global $DB;
+
+    $coordinatorRoles = get_config('mad2api', 'admin_roles');
+
+    return $DB->get_records_sql("
+      SELECT u.id AS userId, u.email,
+      u.firstname AS firstName, u.lastname AS lastName,
+      r.name AS moodleRole
+      FROM {course} c
+      JOIN {context} ct ON c.id = ct.instanceid
+      JOIN {role_assignments} ra ON ra.contextid = ct.id
+      JOIN {user} u ON u.id = ra.userid
+      JOIN {role} r ON r.id = ra.roleid
+      WHERE c.id = {$courseId} AND r.id = {$coordinatorRoles}
+    ");
   }
 
   public static function camelizeObject($obj)
@@ -616,8 +771,8 @@ class mad_dashboard extends external_api {
 
   private static function get_url_for($path)
   {
-    // $apiUrl = "http://host.docker.internal:8080";
-    $apiUrl = "https://api.lanse.com.br";
+    $apiUrl = "http://host.docker.internal:8080";
+    // $apiUrl = "https://api.lanse.com.br";
 
     return "{$apiUrl}/{$path}";
   }

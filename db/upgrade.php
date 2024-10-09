@@ -84,6 +84,18 @@
       }
     }
 
+    if ($oldversion < 2024020564) {
+      $dashboardSettings = $DB->get_records(
+        "mad2api_dashboard_settings", array('is_enabled' => 1)
+      );
+
+      foreach ($dashboardSettings as $dashboardSetting) {
+        \block_mad2api\mad_dashboard::api_enable_call(
+          $dashboardSetting->course_id
+        );
+      }
+    }
+
     if (!!$DB->get_record("mad2api_api_settings", array())) {
       return true;
     }
