@@ -9,6 +9,22 @@
 
     \block_mad2api\mad_dashboard::api_installation_call();
 
+    $table = new xmldb_table('mad2api_course_logs');
+
+    if ($oldversion < 2024110612 && $dbman->table_exists($table)) {
+        $field = new xmldb_field('students_sent', XMLDB_TYPE_INTEGER, 1, null, XMLDB_NOTNULL, null, 0);
+
+        if (!$dbman->field_exists($table, $field->getName())) {
+            $dbman->add_field($table, $field);
+        }
+
+        $field = new xmldb_field('last_log_page', XMLDB_TYPE_INTEGER, 10, null, XMLDB_NOTNULL, null, 1);
+
+        if (!$dbman->field_exists($table, $field->getName())) {
+            $dbman->add_field($table, $field);
+        }
+    }
+
     if ($oldversion < 2017011409) {
        // Define table mad2api_api_settings to be created.
        $table = new xmldb_table('mad2api_api_settings');
@@ -24,7 +40,7 @@
 
        // Conditionally launch create table for mad2api_api_settings.
        if (!$dbman->table_exists($table)) {
-           $dbman->create_table($table);
+          $dbman->create_table($table);
        }
 
        // Mad2api savepoint reached.
@@ -84,7 +100,14 @@
       }
     }
 
-    if ($oldversion < 2024020564) {
+    if ($oldversion < 2024110600) {
+      $table = new xmldb_table('mad2api_dashboard_settings');
+      $column = new xmldb_field('user_id');
+
+      if ($dbman->field_exists($table, $column)) {
+        $dbman->drop_field($table, $column);
+      }
+
       $dashboardSettings = $DB->get_records(
         "mad2api_dashboard_settings", array('is_enabled' => 1)
       );

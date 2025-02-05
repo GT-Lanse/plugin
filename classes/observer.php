@@ -56,7 +56,7 @@ class block_mad2api_observer {
       'component' => $event->component,
       'target' => $event->target,
       'action' => $event->action,
-      'course_id' => $courseId,
+      'moodle_id' => $courseId,
       'moodle_related_user_id' => $event->relateduserid,
       'moodle_user_id' => $event->userid,
       'other' => $event->other,
@@ -86,12 +86,16 @@ class block_mad2api_observer {
 
     $eventName = ($event->eventname == '\core\event\role_assigned') ? '\core\event\user_enrolment_created' : $event->eventname;
 
+    print_object(\block_mad2api\mad_dashboard::get_user(
+      $event->relateduserid, $courseId
+    ));
+
     $data = array(
       'eventName' => $eventName,
       'component' => $event->component,
       'target' => $event->target,
       'action' => $event->action,
-      'courseId' => $courseId,
+      'moodle_id' => $courseId,
       'moodleRelatedUserId' => $event->relateduserid,
       'moodleUserId' => $event->userid,
       "contextId" => $event->contextid,

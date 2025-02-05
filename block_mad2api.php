@@ -35,7 +35,10 @@ class block_mad2api extends block_base {
 
     $context = context_course::instance($COURSE->id);
 
-    if (!\block_mad2api\mad_dashboard::is_current_user_course_teacher($context->id)) {
+    if (
+      !\block_mad2api\mad_dashboard::is_current_user_course_teacher($context->id) &&
+      !\block_mad2api\mad_dashboard::is_current_user_course_coordinator($context->id)
+    ) {
       return null;
     }
 

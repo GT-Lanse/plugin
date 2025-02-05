@@ -145,6 +145,26 @@ class mad_dashboard extends external_api {
       $databaseResponse = $DB->update_record('mad2api_dashboard_settings', $data);
     }
 
+    $lastCourseLog = array_slice($DB->get_records(
+      "mad2api_course_logs", array('course_id' => $courseId, 'status' => 'done')
+    ), -1);
+
+    $courseLog = !empty($lastCourseLog) ? $lastCourseLog[0] : null;
+
+    if ($courseLog) {
+      $updatedAttributes = array(
+        'id' => $courseLog->id,
+        'status' => 'todo',
+        'students_sent' => 0,
+        'last_log_page' => 1,
+        'updated_at' => date('Y-m-d H:i:s')
+      );
+
+      $databaseResponse = $DB->update_record(
+        'mad2api_course_logs', $updatedAttributes, false
+      );
+    }
+
     return array(['disabled' => $databaseResponse]);
   }
 
@@ -195,6 +215,22 @@ class mad_dashboard extends external_api {
     return $isPermitted;
   }
 
+  public static function is_current_user_course_coordinator($contextid)
+  {
+    global $USER;
+
+    $isPermitted = false;
+    $permittedRoles = explode(',', get_config('mad2api', 'admin_roles'));
+
+    foreach (self::get_user_roles($USER->id, $contextid) as $user_role) {
+      if (in_array($user_role->roleid, $permittedRoles)) {
+        $isPermitted = true;
+      }
+    }
+
+    return $isPermitted;
+  }
+
   public static function get_user_roles($userid, $contextid)
   {
     global $DB;
@@ -208,9 +244,11 @@ class mad_dashboard extends external_api {
   {
     global $DB;
 
-    $apiSetting = $DB->get_records("mad2api_api_settings")[0];
+    $apiSettings = $DB->get_records("mad2api_api_settings");
 
-    if (!$apiSetting || ($apiSetting->sent_at < new DateTime("today"))) {
+    $apiSetting = isset($apiSettings) ? array_values($apiSettings)[0] : null;
+
+    if (!$apiSetting || ($apiSetting->sent_at < date('Y-m-d'))) {
       return;
     }
 
@@ -255,10 +293,12 @@ class mad_dashboard extends external_api {
       'course' => array(
         'startDate' => $course->startdate,
         'endDate' => $course->enddate,
-        'name' => $course->fullname
+        'name' => $course->fullname,
+        'shortName' => $course->shortname
       ),
-      'teachers' => get_course_teachers($courseId),
-      'coordinators' => get_course_coordinators($courseId)
+      'teachers' => self::get_course_teachers($courseId),
+      'coordinators' => self::get_course_coordinators($courseId),
+      'currentUserId' => $USER->id
     );
 
     $auth = array(
@@ -266,7 +306,7 @@ class mad_dashboard extends external_api {
       'moodleId' => $courseId
     );
 
-    self::do_post_request("api/v2/courses/{$courseId}/enable", $enable);
+    self::do_post_request("api/v3/courses/{$courseId}/enable", $enable);
     self::send_settings_to_api();
 
     $resp = self::do_post_request("api/v2/authorize", $auth);
@@ -560,14 +600,19 @@ class mad_dashboard extends external_api {
     global $DB;
 
     $studentRole = get_config('mad2api', 'studentRole');
+    $coordinatorRoles = get_config('mad2api', 'admin_roles');
 
     $user = $DB->get_record_sql("
       SELECT u.id AS user_id, u.email,
       u.firstname AS first_name, u.lastname AS last_name,
       (CASE WHEN lastaccess = '0' THEN 'false' ELSE 'true' END) AS logged_in,
       AVG(g.rawgrade) AS current_grade,
-      r.name AS moodle_role,
-      (CASE WHEN r.id = {$studentRole} THEN 'student' ELSE 'teacher' END) AS role
+      r.shortname AS moodle_role,
+      (CASE
+        WHEN r.id = {$studentRole} THEN 'student'
+        WHEN r.id IN ({$coordinatorRoles}) THEN 'coordinator'
+        ELSE 'teacher'
+      END) AS role
       FROM {course} c
       JOIN {context} ct ON c.id = ct.instanceid
       JOIN {role_assignments} ra ON ra.contextid = ct.id
@@ -590,17 +635,19 @@ class mad_dashboard extends external_api {
 
     $teacherRoles = get_config('mad2api', 'roles');
 
-    return $DB->get_records_sql("
-      SELECT u.id AS userId, u.email,
-      u.firstname AS firstName, u.lastname AS lastName,
-      r.name AS moodleRole
+    if (!$teacherRoles) { return []; }
+
+    return array_values($DB->get_records_sql("
+      SELECT u.id AS user_id, u.email,
+      u.firstname AS first_name, u.lastname AS last_name,
+      r.shortname AS moodle_role
       FROM {course} c
       JOIN {context} ct ON c.id = ct.instanceid
       JOIN {role_assignments} ra ON ra.contextid = ct.id
       JOIN {user} u ON u.id = ra.userid
       JOIN {role} r ON r.id = ra.roleid
-      WHERE c.id = {$courseId} AND r.id = {$teacherRoles}
-    ");
+      WHERE c.id = {$courseId} AND r.id IN ({$teacherRoles})
+    "));
   }
 
   public static function get_course_coordinators($courseId)
@@ -609,17 +656,19 @@ class mad_dashboard extends external_api {
 
     $coordinatorRoles = get_config('mad2api', 'admin_roles');
 
-    return $DB->get_records_sql("
-      SELECT u.id AS userId, u.email,
-      u.firstname AS firstName, u.lastname AS lastName,
-      r.name AS moodleRole
+    if (!$coordinatorRoles) { return []; }
+
+    return array_values($DB->get_records_sql("
+      SELECT u.id AS user_id, u.email,
+      u.firstname AS first_name, u.lastname AS last_name,
+      r.shortname AS moodle_role
       FROM {course} c
       JOIN {context} ct ON c.id = ct.instanceid
       JOIN {role_assignments} ra ON ra.contextid = ct.id
       JOIN {user} u ON u.id = ra.userid
       JOIN {role} r ON r.id = ra.roleid
-      WHERE c.id = {$courseId} AND r.id = {$coordinatorRoles}
-    ");
+      WHERE c.id = {$courseId} AND r.id IN ({$coordinatorRoles})
+    "));
   }
 
   public static function camelizeObject($obj)
@@ -773,6 +822,7 @@ class mad_dashboard extends external_api {
   {
     $apiUrl = "http://host.docker.internal:8080";
     // $apiUrl = "https://api.lanse.com.br";
+    // $apiUrl = 'https://hmlg-api.lanse.com.br';
 
     return "{$apiUrl}/{$path}";
   }
