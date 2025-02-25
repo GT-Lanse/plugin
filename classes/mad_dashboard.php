@@ -145,26 +145,6 @@ class mad_dashboard extends external_api {
       $databaseResponse = $DB->update_record('mad2api_dashboard_settings', $data);
     }
 
-    $lastCourseLog = array_slice($DB->get_records(
-      "mad2api_course_logs", array('course_id' => $courseId, 'status' => 'done')
-    ), -1);
-
-    $courseLog = !empty($lastCourseLog) ? $lastCourseLog[0] : null;
-
-    if ($courseLog) {
-      $updatedAttributes = array(
-        'id' => $courseLog->id,
-        'status' => 'todo',
-        'students_sent' => 0,
-        'last_log_page' => 1,
-        'updated_at' => date('Y-m-d H:i:s')
-      );
-
-      $databaseResponse = $DB->update_record(
-        'mad2api_course_logs', $updatedAttributes, false
-      );
-    }
-
     return array(['disabled' => $databaseResponse]);
   }
 
@@ -179,12 +159,16 @@ class mad_dashboard extends external_api {
     $courseLog = !empty($lastCourseLog) ? $lastCourseLog[0] : null;
 
     if (!$courseLog) {
+      echo("Course log not found for course #{$courseId} \n");
+
       return;
     }
 
     $response = self::api_check_course_data($courseId);
 
     if ($response != null && isset($response->resend_data) && $response->resend_data) {
+      echo("Resend data enabled for course #{$courseId} \n");
+
       $updatedAttributes = array(
         'id' => $courseLog->id,
         'status' => 'todo',

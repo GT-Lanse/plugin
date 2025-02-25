@@ -55,6 +55,8 @@ class mad_logger extends \core\task\scheduled_task {
       );
 
       $DB->update_record('mad2api_course_logs', $data);
+
+      echo("course log updated to done \n");
     }
   }
 }
