@@ -11,7 +11,7 @@ class mad_logger extends \core\task\scheduled_task {
    * @return string
    */
   public function get_name() {
-    return 'MAD Logging';
+    return 'LANSE Send Logs';
   }
 
   /**

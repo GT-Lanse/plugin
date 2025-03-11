@@ -148,6 +148,58 @@ class mad_dashboard extends external_api {
     return array(['disabled' => $databaseResponse]);
   }
 
+  public static function send_pending_activities()
+  {
+    global $DB, $CFG;
+
+    $response = self::api_check_pending_activities();
+
+    if (!isset($response->data)) {
+      echo("No pending activities found \n");
+
+      return;
+    }
+
+    echo("Found " . count($response->data) . " pending activities \n");
+
+    foreach ($response->data as $activity) {
+      $tableName = strtolower($activity->type);
+
+      if (!isset($activity->contextInstanceId)) {
+        continue;
+      }
+
+      $courseModuleQuery = "
+        SELECT * FROM {$CFG->prefix}course_modules WHERE id = {$activity->contextInstanceId}
+      ";
+
+      $courseModule = $DB->get_record_sql($courseModuleQuery);
+
+      $instanceQuery = "
+        SELECT * FROM {$CFG->prefix}{$tableName} AS t WHERE t.id = {$courseModule->instance}
+      ";
+
+      echo(
+        "Searching on table {$CFG->prefix}{$tableName} for activity #{$courseModule->instance} \n"
+      );
+
+      $instance = $DB->get_record_sql($instanceQuery);
+
+      if (!$instance) {
+        echo("Instance not found for activity #{$activity->contextInstanceId} \n");
+
+        continue;
+      }
+
+      self::send_activity_name($instance->course, $activity->contextId, $instance->name);
+    }
+  }
+
+  public static function send_activity_name($courseId, $contextId, $name)
+  {
+    self::do_put_request("api/v3/courses/{$courseId}/activities/{$contextId}", ['name' => $name]);
+  }
+
   public static function check_data_on_api($courseId)
   {
     global $DB;
@@ -303,6 +355,11 @@ class mad_dashboard extends external_api {
     return self::do_get_request("api/v2/plugin/courses/{$courseId}/resend_data");
   }
 
+  public static function api_check_pending_activities()
+  {
+    return self::do_get_request("api/v3/activities/pending_information");
+  }
+
   public static function api_send_students($courseId)
   {
     global $DB;
@@ -404,6 +461,8 @@ class mad_dashboard extends external_api {
   {
     global $DB, $CFG, $USER;
 
+    echo("Sending original course logs for {$courseId}\n");
+
     $courseLog = $DB->get_record(
       "logstore_standard_log",
       array(
@@ -412,6 +471,8 @@ class mad_dashboard extends external_api {
     );
 
     if (!$courseLog) {
+      echo("Course is not restored \n");
+
       return;
     }
 
@@ -429,6 +490,8 @@ class mad_dashboard extends external_api {
 
     $logs = array();
 
+    echo("Sending {$count} activities for course {$courseId}\n");
+
     for ($currentPage = 1; $currentPage <= $endPage; $currentPage++) {
       $offset = ($currentPage - 1) * $perPage;
 
@@ -437,8 +500,8 @@ class mad_dashboard extends external_api {
               m.name AS module_type,
               cm.instance,
               cm.section
-        FROM mdl_course_modules cm
-        JOIN mdl_modules m ON cm.module = m.id
+        FROM {$CFG->prefix}course_modules cm
+        JOIN {$CFG->prefix}modules m ON cm.module = m.id
         WHERE cm.course = {$courseId}
         GROUP BY m.id
         LIMIT {$perPage} OFFSET {$offset}
@@ -451,7 +514,7 @@ class mad_dashboard extends external_api {
         $instanceId = $courseModule->instance;
 
         $instanceQuery = "
-          SELECT * FROM mdl_{$tableName} AS t WHERE t.id = {$instanceId}
+          SELECT * FROM {$CFG->prefix}{$tableName} AS t WHERE t.id = {$instanceId}
         ";
 
         $instance = $DB->get_record_sql($instanceQuery);
@@ -481,6 +544,8 @@ class mad_dashboard extends external_api {
           'timecreated' => $instance->timemodified
         );
       }
+
+      echo("Sending activity {$instance->name} \n");
 
       $data = array(
         'logs' => $logs
@@ -804,8 +869,8 @@ class mad_dashboard extends external_api {
 
   private static function get_url_for($path)
   {
-    $apiUrl = "http://host.docker.internal:8080";
-    // $apiUrl = "https://api.lanse.com.br";
+    // $apiUrl = "http://host.docker.internal:8080";
+    $apiUrl = "https://api.lanse.com.br";
     // $apiUrl = 'https://hmlg-api.lanse.com.br';
 
     return "{$apiUrl}/{$path}";

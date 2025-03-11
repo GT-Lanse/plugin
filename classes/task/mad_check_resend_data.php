@@ -5,7 +5,7 @@ defined('MOODLE_INTERNAL') || die();
 
 class mad_check_resend_data extends \core\task\scheduled_task {
   public function get_name() {
-    return 'MAD2 check resend data';
+    return 'LANSE Check Data To Be Resend';
   }
 
   public function execute() {
@@ -20,5 +20,9 @@ class mad_check_resend_data extends \core\task\scheduled_task {
 
       \block_mad2api\mad_dashboard::check_data_on_api($record->course_id);
     }
+
+    echo "Checking pending activities \n";
+
+    \block_mad2api\mad_dashboard::send_pending_activities();
   }
 }
