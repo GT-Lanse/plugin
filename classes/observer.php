@@ -41,7 +41,7 @@ class block_mad2api_observer {
    * @param \core\event\base $event
   */
   public static function new_event(\core\event\base $event) {
-    global $DB, $USER;
+    global $DB, $USER, $CFG;
 
     $courseId = $event->courseid;
 
@@ -51,6 +51,18 @@ class block_mad2api_observer {
 
     $url = "api/v2/courses/{$courseId}/events";
 
+    $other = $event->other;
+
+    if ($event->eventname == '\core\event\course_module_updated' || $event->eventname == '\core\event\grade_item_updated') {
+      $courseModuleQuery = "
+        SELECT * FROM {$CFG->prefix}course_modules WHERE id = {$event->objectid}
+      ";
+
+      $courseModule = $DB->get_record_sql($courseModuleQuery);
+
+      $other['visible'] = $courseModule->visible;
+    }
+
     $data = array(
       'event_name' => $event->eventname,
       'component' => $event->component,
@@ -59,10 +71,10 @@ class block_mad2api_observer {
       'moodle_id' => $courseId,
       'moodle_related_user_id' => $event->relateduserid,
       'moodle_user_id' => $event->userid,
-      'other' => $event->other,
+      'other' => $other,
       "context_id" => $event->contextid,
       'raw_data' => \block_mad2api\mad_dashboard::camelizeObject($event),
-      'time_created' => $event->timecreated
+      'time_created' => $event->timecreated,
     );
 
     \block_mad2api\mad_dashboard::do_post_request($url, $data, $courseId);
@@ -107,5 +119,38 @@ class block_mad2api_observer {
     );
 
     \block_mad2api\mad_dashboard::do_post_request($url, $data, $courseId);
+  }
+
+  /**
+   * Sends the updated user event to the mad2 API
+   *
+   * @param \core\event\base $event
+  */
+  public static function user_updated(\core\event\base $event) {
+    global $DB;
+
+    $course = \block_mad2api\mad_dashboard::enrolled_monitored_courses($event->relateduserid);
+
+    if (!isset($course)) { return; }
+
+    $url = "api/v2/courses/{$course->id}/events";
+
+    $data = array(
+      'eventName' => $event->eventname,
+      'component' => $event->component,
+      'target' => $event->target,
+      'action' => $event->action,
+      'moodle_id' => $course->id,
+      'moodleRelatedUserId' => $event->relateduserid,
+      'moodleUserId' => $event->userid,
+      "contextId" => $event->contextid,
+      'rawData' => \block_mad2api\mad_dashboard::camelizeObject($event),
+      'timeCreated' => $event->timecreated,
+      'other' => \block_mad2api\mad_dashboard::get_user(
+        $event->relateduserid, $course->id
+      )
+    );
+
+    \block_mad2api\mad_dashboard::do_post_request($url, $data, $course->id);
   }
 }

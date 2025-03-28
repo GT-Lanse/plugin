@@ -191,7 +191,9 @@ class mad_dashboard extends external_api {
         continue;
       }
 
-      self::send_activity_name($instance->course, $activity->contextId, $instance->name);
+      echo("Sending activity name {$instance->name} for {$activity->name}\n");
+
+      self::send_activity_name($activity->moodleId, $activity->contextId, $instance->name);
     }
   }
 
@@ -220,6 +222,8 @@ class mad_dashboard extends external_api {
 
     if ($response != null && isset($response->resend_data) && $response->resend_data) {
       echo("Resend data enabled for course #{$courseId} \n");
+
+      self::api_enable_call($courseId);
 
       $updatedAttributes = array(
         'id' => $courseLog->id,
@@ -334,7 +338,7 @@ class mad_dashboard extends external_api {
       ),
       'teachers' => self::get_course_teachers($courseId),
       'coordinators' => self::get_course_coordinators($courseId),
-      'currentUserId' => $USER->id
+      'currentUserId' => isset($USER) ? $USER->id : null
     );
 
     $auth = array(
@@ -426,6 +430,8 @@ class mad_dashboard extends external_api {
     $perPage = 100;
     $endPage = ceil($count / $perPage);
 
+    echo("Sending {$count} logs");
+
     for ($currentPage = $courseLog->last_log_page; $currentPage <= $endPage; $currentPage++) {
       $updatedAttributes = array(
         'id' => $courseLog->id,
@@ -469,14 +475,6 @@ class mad_dashboard extends external_api {
         'courseid' => $courseId, 'eventname' => '\core\event\course_restored'
       )
     );
-
-    if (!$courseLog) {
-      echo("Course is not restored \n");
-
-      return;
-    }
-
-    $formattedCourseLog = json_decode($courseLog->other);
 
     $countSql = "
       SELECT COUNT(DISTINCT cm.id)
@@ -527,7 +525,8 @@ class mad_dashboard extends external_api {
           'other' => json_encode(array(
             'name' => $instance->name,
             'instanceid' => $instanceId,
-            'modulename' => $tableName
+            'modulename' => $tableName,
+            'visible' => $courseModule->visible
           )),
           'action' => 'created',
           'target' => 'course_module',
@@ -545,7 +544,7 @@ class mad_dashboard extends external_api {
         );
       }
 
-      echo("Sending activity {$instance->name} \n");
+      echo("Sending activity {$instance->name} | viisble? {$courseModule->visible} \n");
 
       $data = array(
         'logs' => $logs
@@ -563,12 +562,37 @@ class mad_dashboard extends external_api {
 
     $auth = array(
       'teacherId' => $USER->id,
-      'moodleId' => $courseId
+      'moodleId' => $courseIdl,
+      'email' => $USER->email
     );
 
     $resp = self::do_post_request("api/v2/authorize", $auth, $courseId);
 
     return isset($resp->data) ? $resp->data : array();
+  }
+
+  public static function enrolled_monitored_courses($userId)
+  {
+    global $DB;
+
+    $monitoredCourses = $DB->get_records("mad2api_dashboard_settings", array('is_enabled' => 1));
+
+    foreach ($monitoredCourses as $monitoredCourse) {
+      $courseId = $DB->get_record_sql("
+        SELECT c.id
+        FROM {course} c
+        JOIN {context} ct ON c.id = ct.instanceid
+        JOIN {role_assignments} ra ON ra.contextid = ct.id
+        JOIN {user} u ON u.id = ra.userid
+        WHERE c.id = {$monitoredCourse->course_id} AND u.id = {$userId}
+      ");
+
+      if (isset($courseId)) {
+        return $courseId;
+      }
+    }
+
+    return;
   }
 
   public static function get_course_students_count($courseId)
@@ -598,7 +622,8 @@ class mad_dashboard extends external_api {
       SELECT u.id AS user_id, u.email,
       u.firstname AS first_name, u.lastname AS last_name,
       (CASE WHEN lastaccess = '0' THEN 'false' ELSE 'true' END) AS logged_in,
-      AVG(g.rawgrade) AS current_grade
+      AVG(g.rawgrade) AS current_grade,
+      u.phone1, u.phone2
       FROM {course} c
       JOIN {context} ct ON c.id = ct.instanceid
       JOIN {role_assignments} ra ON ra.contextid = ct.id
@@ -655,7 +680,7 @@ class mad_dashboard extends external_api {
       SELECT u.id AS user_id, u.email,
       u.firstname AS first_name, u.lastname AS last_name,
       (CASE WHEN lastaccess = '0' THEN 'false' ELSE 'true' END) AS logged_in,
-      AVG(g.rawgrade) AS current_grade,
+      AVG(g.rawgrade) AS current_grade, phone1, phone2,
       r.shortname AS moodle_role,
       (CASE
         WHEN r.id = {$studentRole} THEN 'student'
@@ -689,7 +714,7 @@ class mad_dashboard extends external_api {
     return array_values($DB->get_records_sql("
       SELECT u.id AS user_id, u.email,
       u.firstname AS first_name, u.lastname AS last_name,
-      r.shortname AS moodle_role
+      r.shortname AS moodle_role, u.phone1, u.phone2
       FROM {course} c
       JOIN {context} ct ON c.id = ct.instanceid
       JOIN {role_assignments} ra ON ra.contextid = ct.id
@@ -710,7 +735,7 @@ class mad_dashboard extends external_api {
     return array_values($DB->get_records_sql("
       SELECT u.id AS user_id, u.email,
       u.firstname AS first_name, u.lastname AS last_name,
-      r.shortname AS moodle_role
+      r.shortname AS moodle_role, u.phone1, u.phone2
       FROM {course} c
       JOIN {context} ct ON c.id = ct.instanceid
       JOIN {role_assignments} ra ON ra.contextid = ct.id
@@ -869,8 +894,8 @@ class mad_dashboard extends external_api {
 
   private static function get_url_for($path)
   {
-    // $apiUrl = "http://host.docker.internal:8080";
-    $apiUrl = "https://api.lanse.com.br";
+    $apiUrl = "http://host.docker.internal:8080";
+    // $apiUrl = "https://api.lanse.com.br";
     // $apiUrl = 'https://hmlg-api.lanse.com.br';
 
     return "{$apiUrl}/{$path}";

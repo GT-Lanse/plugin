@@ -272,5 +272,13 @@ $observers = array(
     'callback'  => 'block_mad2api_observer::new_event',
     'internal'  => false,
     'priority'  => 1000,
+  ),
+
+  // user
+  array(
+    'eventname' => '\core\event\user_updated',
+    'callback'  => 'block_mad2api_observer::user_updated',
+    'internal'  => false,
+    'priority'  => 1000,
   )
 );
