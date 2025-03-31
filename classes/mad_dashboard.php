@@ -343,7 +343,8 @@ class mad_dashboard extends external_api {
 
     $auth = array(
       'teacherId' => $USER->id,
-      'moodleId' => $courseId
+      'moodleId' => $courseId,
+      'email' => $USER->email
     );
 
     self::do_post_request("api/v3/courses/{$courseId}/enable", $enable);
