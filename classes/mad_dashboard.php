@@ -497,7 +497,8 @@ class mad_dashboard extends external_api {
         SELECT cm.id AS course_module_id,
               m.name AS module_type,
               cm.instance,
-              cm.section
+              cm.section,
+              cm.visible AS visible
         FROM {$CFG->prefix}course_modules cm
         JOIN {$CFG->prefix}modules m ON cm.module = m.id
         WHERE cm.course = {$courseId}
@@ -894,8 +895,8 @@ class mad_dashboard extends external_api {
 
   private static function get_url_for($path)
   {
-    $apiUrl = "http://host.docker.internal:8080";
-    // $apiUrl = "https://api.lanse.com.br";
+    // $apiUrl = "http://host.docker.internal:8080";
+    $apiUrl = "https://api.lanse.com.br";
     // $apiUrl = 'https://hmlg-api.lanse.com.br';
 
     return "{$apiUrl}/{$path}";
