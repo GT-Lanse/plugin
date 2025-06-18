@@ -9,6 +9,7 @@ use external_function_parameters;
 use external_single_structure;
 use external_value;
 use external_multiple_structure;
+use moodle_url;
 
 # More enhancements will come later as the NN dev continues
 class mad_dashboard extends external_api {
@@ -175,6 +176,12 @@ class mad_dashboard extends external_api {
 
       $courseModule = $DB->get_record_sql($courseModuleQuery);
 
+      if (!isset($courseModule->instance)) {
+        echo("Course module not found for activity #{$activity->contextInstanceId} \n");
+
+        continue;
+      }
+
       $instanceQuery = "
         SELECT * FROM {$CFG->prefix}{$tableName} AS t WHERE t.id = {$courseModule->instance}
       ";
@@ -185,7 +192,7 @@ class mad_dashboard extends external_api {
 
       $instance = $DB->get_record_sql($instanceQuery);
 
-      if (!$instance) {
+      if (!isset($instance)) {
         echo("Instance not found for activity #{$activity->contextInstanceId} \n");
 
         continue;
@@ -328,13 +335,15 @@ class mad_dashboard extends external_api {
     global $USER, $DB;
 
     $course = $DB->get_record('course', ['id' => $courseId]);
+    $courseUrl = new \moodle_url('/course/view.php', ['id' => $courseId]);
 
     $enable = array(
       'course' => array(
         'startDate' => $course->startdate,
         'endDate' => $course->enddate,
         'name' => $course->fullname,
-        'shortName' => $course->shortname
+        'shortName' => $course->shortname,
+        'url' => $courseUrl->out()
       ),
       'teachers' => self::get_course_teachers($courseId),
       'coordinators' => self::get_course_coordinators($courseId),
@@ -431,7 +440,7 @@ class mad_dashboard extends external_api {
     $perPage = 100;
     $endPage = ceil($count / $perPage);
 
-    echo("Sending {$count} logs");
+    echo("Sending {$count} logs \n");
 
     for ($currentPage = $courseLog->last_log_page; $currentPage <= $endPage; $currentPage++) {
       $updatedAttributes = array(
@@ -468,18 +477,14 @@ class mad_dashboard extends external_api {
   {
     global $DB, $CFG, $USER;
 
-    echo("Sending original course logs for {$courseId}\n");
+    require_once($CFG->libdir . '/gradelib.php');
 
-    $courseLog = $DB->get_record(
-      "logstore_standard_log",
-      array(
-        'courseid' => $courseId, 'eventname' => '\core\event\course_restored'
-      )
-    );
+    echo("Sending original course logs for {$courseId}\n");
 
     $countSql = "
       SELECT COUNT(DISTINCT cm.id)
       FROM {$CFG->prefix}course_modules cm
+      JOIN {$CFG->prefix}modules m ON cm.module = m.id
       WHERE cm.course = {$courseId}
     ";
 
@@ -487,27 +492,34 @@ class mad_dashboard extends external_api {
     $perPage = 25;
     $endPage = ceil($count / $perPage);
 
-    $logs = array();
-
-    echo("Sending {$count} activities for course {$courseId}\n");
+    echo("Sending {$count} activities for course {$courseId} in {$endPage} pages\n");
 
     for ($currentPage = 1; $currentPage <= $endPage; $currentPage++) {
       $offset = ($currentPage - 1) * $perPage;
+      $logs = array(); // limpa os logs a cada página
+
+      echo("Sending page {$currentPage} for course {$courseId} \n");
 
       $courseModuleQuery = "
         SELECT cm.id AS course_module_id,
-              m.name AS module_type,
-              cm.instance,
-              cm.section,
-              cm.visible AS visible
+          m.name AS module_type,
+          cm.instance,
+          cm.section,
+          cm.visible AS visible
         FROM {$CFG->prefix}course_modules cm
         JOIN {$CFG->prefix}modules m ON cm.module = m.id
         WHERE cm.course = {$courseId}
-        GROUP BY m.id
         LIMIT {$perPage} OFFSET {$offset}
       ";
 
       $courseModules = $DB->get_records_sql($courseModuleQuery);
+
+      if (empty($courseModules)) {
+        echo("No course modules found for course {$courseId} \n");
+        continue;
+      }
+
+      echo("Found " . count($courseModules) . " course modules for course {$courseId} \n");
 
       foreach ($courseModules as $courseModule) {
         $tableName = $courseModule->module_type;
@@ -519,16 +531,40 @@ class mad_dashboard extends external_api {
 
         $instance = $DB->get_record_sql($instanceQuery);
 
+        if (!$instance || !isset($instance->name)) {
+          echo("Instance not found for table {$tableName} with ID {$instanceId}\n");
+
+          continue;
+        }
+
         $context = \context_module::instance($courseModule->course_module_id);
+
+        if (!isset($context->instanceid)) {
+          echo("Context not found for activity #{$courseModule->course_module_id} \n");
+          echo("Context result " . json_encode($context) . "\n");
+
+          continue;
+        }
+
+        $cm = get_coursemodule_from_id(false, $courseModule->course_module_id, 0, false, MUST_EXIST);
+
+        $grades = grade_get_grades(
+          $cm->course, 'mod', $cm->modname, $cm->instance
+        );
+
+        $activityUrl = new moodle_url("/mod/{$cm->modname}/view.php", ['id' => $cm->id]);
 
         $logs[$context->id] = array(
           'id' => 0,
           'crud' => 'c',
           'other' => json_encode(array(
             'name' => $instance->name,
-            'instanceid' => $instanceId,
+            'instanceid' => $context->instanceid,
             'modulename' => $tableName,
-            'visible' => $courseModule->visible
+            'visible' => $courseModule->visible,
+            'gradable' => !empty($grades->items),
+            'duedate' => self::get_activity_duedate($cm),
+            'activityurl' => $activityUrl->out()
           )),
           'action' => 'created',
           'target' => 'course_module',
@@ -542,20 +578,60 @@ class mad_dashboard extends external_api {
           'objecttable' => 'course_modules',
           'contextlevel' => $context->contextlevel,
           'contextinstanceid' => $context->instanceid,
-          'timecreated' => $instance->timemodified
+          'timecreated' => $instance->timemodified ?? time()
         );
+
+        echo("Sending activity {$instance->name} | {$instanceId} | visible? {$courseModule->visible} \n");
       }
 
-      echo("Sending activity {$instance->name} | viisble? {$courseModule->visible} \n");
+      $data = array('logs' => $logs);
 
-      $data = array(
-        'logs' => $logs
-      );
-
-      self::do_post_request(
-        "api/v2/courses/{$courseId}/logs/batch", $data, $courseId
-      );
+      try {
+        self::do_post_request("api/v2/courses/{$courseId}/logs/batch", $data, $courseId);
+      } catch (Exception $e) {
+        echo("Error sending logs: " . $e->getMessage() . "\n");
+      }
     }
+  }
+
+  public static function get_activity_duedate($cm) {
+    global $DB;
+
+    if (empty($cm->modname) || empty($cm->instance)) {
+        return null;
+    }
+
+    $modname = $cm->modname;
+    $instanceid = $cm->instance;
+
+    $duedatefields = [
+        'assign'     => 'duedate',
+        'quiz'       => 'timeclose',
+        'lesson'     => 'deadline',
+        'workshop'   => 'submissionend',
+        'chat'       => 'chattime',
+        'data'       => 'timeavailableto',
+        'feedback'   => 'timeclose',
+        'forum'      => 'duedate',
+        'glossary'   => 'assesseduntil',
+        'scorm'      => 'timeclose',
+        'survey'     => null,
+        'wiki'       => null,
+        'h5pactivity'=> 'timeclose',
+        'choice'     => 'timeclose',
+        'database'   => 'timeavailableto',
+        'assignoverride' => 'duedate',
+    ];
+
+    if (!isset($duedatefields[$modname]) || !$duedatefields[$modname]) {
+      return null;
+    }
+
+    $field = $duedatefields[$modname];
+
+    $record = $DB->get_record("{$modname}", ['id' => $instanceid], $field);
+
+    return $record->$field ?? null;
   }
 
   public static function api_dashboard_auth_url($courseId)
@@ -896,8 +972,8 @@ class mad_dashboard extends external_api {
 
   private static function get_url_for($path)
   {
-    // $apiUrl = "http://host.docker.internal:8080";
-    $apiUrl = "https://api.lanse.com.br";
+    $apiUrl = "http://host.docker.internal:8080";
+    // $apiUrl = "https://api.lanse.com.br";
     // $apiUrl = 'https://hmlg-api.lanse.com.br';
 
     return "{$apiUrl}/{$path}";

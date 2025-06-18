@@ -53,14 +53,28 @@ class block_mad2api_observer {
 
     $other = $event->other;
 
-    if ($event->eventname == '\core\event\course_module_updated' || $event->eventname == '\core\event\grade_item_updated') {
+    if (
+      $event->eventname == '\core\event\course_module_updated' ||
+      $event->eventname == '\core\event\grade_item_updated' ||
+      $event->eventname == '\core\event\course_module_created'
+    ) {
       $courseModuleQuery = "
         SELECT * FROM {$CFG->prefix}course_modules WHERE id = {$event->objectid}
       ";
 
       $courseModule = $DB->get_record_sql($courseModuleQuery);
+      $cm = get_coursemodule_from_id(false, $event->objectid, 0, false, MUST_EXIST);
+
+      $grades = grade_get_grades(
+        $courseModule->course, 'mod', $cm->modname, $cm->instance
+      );
+
+      $activityUrl = new \moodle_url("/mod/{$cm->modname}/view.php", ['id' => $cm->id]);
 
       $other['visible'] = $courseModule->visible;
+      $other['gradable'] = !empty($grades->items);
+      $other['duedate'] = \block_mad2api\mad_dashboard::get_activity_duedate($cm);
+      $other['url'] = $activityUrl->out();
     }
 
     $data = array(
