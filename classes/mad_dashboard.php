@@ -972,8 +972,8 @@ class mad_dashboard extends external_api {
 
   private static function get_url_for($path)
   {
-    $apiUrl = "http://host.docker.internal:8080";
-    // $apiUrl = "https://api.lanse.com.br";
+    // $apiUrl = "http://host.docker.internal:8080";
+    $apiUrl = "https://api.lanse.com.br";
     // $apiUrl = 'https://hmlg-api.lanse.com.br';
 
     return "{$apiUrl}/{$path}";

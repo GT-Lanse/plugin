@@ -72,7 +72,11 @@ class block_mad2api_observer {
       $activityUrl = new \moodle_url("/mod/{$cm->modname}/view.php", ['id' => $cm->id]);
 
       $other['visible'] = $courseModule->visible;
-      $other['gradable'] = !empty($grades->items);
+
+      if ($event->eventname != '\core\event\grade_item_updated') {
+        $other['gradable'] = !empty($grades->items);
+      }
+
       $other['duedate'] = \block_mad2api\mad_dashboard::get_activity_duedate($cm);
       $other['url'] = $activityUrl->out();
     }
