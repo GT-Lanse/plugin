@@ -45,6 +45,7 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/str'],
 
               $("#access-dashboard").attr("href", body.url);
               $('#access-dashboard').removeClass('disabled');
+              $('#lti-lanse').removeClass('disabled');
             }
           });
         });
@@ -69,6 +70,7 @@ define(['jquery', 'core/ajax', 'core/notification', 'core/str'],
               $('#enable-settings').removeClass('disabled');
               $('#disable-settings').addClass('disabled');
               $('#access-dashboard').addClass('disabled');
+              $('#lti-lanse').addClass('disabled');
             }
           });
         });

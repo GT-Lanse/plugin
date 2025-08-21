@@ -25,6 +25,8 @@
 defined('MOODLE_INTERNAL') || die();
 
 require_once('mad_dashboard.php');
+require_once($CFG->libdir . '/gradelib.php');
+require_once($CFG->libdir . '/weblib.php');
 
 /**
  * Event observer.
@@ -79,6 +81,48 @@ class block_mad2api_observer {
 
       $other['duedate'] = \block_mad2api\mad_dashboard::get_activity_duedate($cm);
       $other['url'] = $activityUrl->out();
+    }
+
+    $data = array(
+      'event_name' => $event->eventname,
+      'component' => $event->component,
+      'target' => $event->target,
+      'action' => $event->action,
+      'moodle_id' => $courseId,
+      'moodle_related_user_id' => $event->relateduserid,
+      'moodle_user_id' => $event->userid,
+      'other' => $other,
+      "context_id" => $event->contextid,
+      'raw_data' => \block_mad2api\mad_dashboard::camelizeObject($event),
+      'time_created' => $event->timecreated,
+    );
+
+    \block_mad2api\mad_dashboard::do_post_request($url, $data, $courseId);
+  }
+
+  /**
+   * Sends the new grade event to the mad2 API
+   *
+   * @param \core\event\base $event
+  */
+  public static function new_grade(\core\event\base $event) {
+    global $DB, $USER, $CFG;
+
+    $courseId = $event->courseid;
+
+    if (!isset($USER) || !isset($courseId) || !\block_mad2api\mad_dashboard::is_course_enabled($courseId)) {
+      return;
+    }
+
+    $url = "api/v2/courses/{$courseId}/events";
+
+    $other = $event->other;
+    $itemid = $other['itemid'];
+    $gradeitem = $DB->get_record('grade_items', ['id' => $itemid]);
+
+    if ($gradeitem && $gradeitem->itemtype === 'mod') {
+      $other['instance_id'] = $gradeitem->iteminstance;
+      $other['item_module'] = $gradeitem->itemmodule;
     }
 
     $data = array(

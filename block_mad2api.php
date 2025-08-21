@@ -54,28 +54,48 @@ class block_mad2api extends block_base {
 
     $PAGE->requires->js_call_amd('block_mad2api/enable_button_api_call', 'init', array($COURSE->id, $CFG->version));
 
+    $lti_url = new moodle_url('/blocks/mad2api/view.php', [
+      'courseid' => $COURSE->id,
+      'coursename' => $COURSE->fullname
+    ]);
+
     if ($enabled) {
       \block_mad2api\mad_dashboard::check_data_on_api($COURSE->id);
 
       $courseInfo = \block_mad2api\mad_dashboard::enable($COURSE->id);
       $url = $courseInfo[0]['url'];
 
-      $this->content->text =
-        '<div class="plugin-link-container">
+      $this->content->text = html_writer::link($lti_url, get_string('access_dashboard', 'block_mad2api'), [
+        'class' => 'btn btr-primary',
+        'id' => 'lti-lanse',
+        'style' => 'width: 100%; margin-top: 10px; background-color: #04626a; color: white;'
+      ]) . '
+        <div class="plugin-link-container">
           <div>
-            <a id="access-dashboard" class="access-dashboard-button" href="'. $url .'" target="_blank">'. get_string('access_dashboard', 'block_mad2api') .'</a>
+            <a id="access-dashboard" class="access-dashboard-button btn" href="'. $url .'" target="_blank" style="width: 100%; margin: 10px 0; color: #04626a; border: 3px solid #04626a;">
+              '. get_string('open_dashboard', 'block_mad2api') .'
+            </a>
           </div>
-          <a id="enable-settings" class="plugin-link disabled" href="">'. get_string('enable_dashboard', 'block_mad2api') .'</a>
-          <a id="disable-settings" class="plugin-link" href="">'. get_string('disable_dashboard', 'block_mad2api') .'</a>
-        </div>';
+          <a id="enable-settings" class="plugin-link disabled btn" href="" style="width: 100%; margin-bottom: 10px; background-color: #04626a; color: white;">
+            '. get_string('enable_dashboard', 'block_mad2api') .'
+          </a>
+          <a id="disable-settings" class="plugin-link btn" href="" style="width: 100%; margin-bottom: 10px; margin-top: 20px; color: #cc0000;">
+            '. get_string('disable_dashboard', 'block_mad2api') .'
+          </a>
+        </div>
+        ';
     } else {
-      $this->content->text =
+      $this->content->text = html_writer::link($lti_url, get_string('access_dashboard', 'block_mad2api'), [
+        'class' => 'btn btr-primary disabled',
+        'id' => 'lti-lanse',
+        'style' => 'width: 100%; margin-top: 10px; background-color: #04626a; color: white;'
+      ]) .
         '<div class="plugin-link-container">
           <div>
-            <a id="access-dashboard" class="access-dashboard-button disabled" href="" target="_blank">'. get_string('access_dashboard', 'block_mad2api') .'</a>
+            <a id="access-dashboard" class="access-dashboard-button disabled btn" href="" target="_blank" style="width: 100%; margin: 10px 0; color: #04626a; border: 3px solid #04626a;">'. get_string('open_dashboard', 'block_mad2api') .'</a>
           </div>
-          <a id="enable-settings" class="plugin-link" href="">'. get_string('enable_dashboard', 'block_mad2api') .'</a>
-          <a id="disable-settings" class="plugin-link disabled" href="">'. get_string('disable_dashboard', 'block_mad2api') .'</a>
+          <a id="enable-settings" class="plugin-link btn" href="" style="width: 100%; margin-top: 10px; background-color: #04626a; color: white;">'. get_string('enable_dashboard', 'block_mad2api') .'</a>
+          <a id="disable-settings" class="plugin-link disabled btn" href="" style="width: 100%; margin-bottom: 10px; margin-top: 20px; color: #cc0000;">'. get_string('disable_dashboard', 'block_mad2api') .'</a>
         </div>';
     }
 

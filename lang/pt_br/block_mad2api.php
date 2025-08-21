@@ -30,13 +30,14 @@ $string['headerconfig'] = 'Cabeçalho da seção de configuração';
 $string['labelfoo'] = 'Legenda da configuração';
 $string['mad2api:addinstance'] = 'Adicionar LANSE';
 $string['mad2api:myaddinstance'] = 'Adicionar LANSE to my moodle';
-$string['pluginname'] = 'Dashboard LANSE';
+$string['pluginname'] = 'Painel LANSE';
 $string['error_modal_title'] = 'Erro ao habilitar curso';
-$string['access_dashboard'] = 'Acessar a dashboard';
+$string['access_dashboard'] = 'Acessar painel';
+$string['open_dashboard'] = 'Acessar plataforma LANSE';
 $string['enable_dashboard'] = 'Habilitar monitoramento do curso';
 $string['disable_dashboard'] = 'Desabilitar monitoramento do curso';
 $string['load_data'] = 'Carregar dados do curso agora';
-$string['not_teacher'] = 'Para acessar o dashboard, você precisa ser professor do curso.';
+$string['not_teacher'] = 'Para acessar o painel, você precisa ser professor do curso.';
 $string['error_modal_body'] = "
   <p>
     Por favor, verifique se o curso que você está tentando habilitar possui as datas de início e término configuradas corretamente. Se o problema persistir, entre em contato conosco em: <b>suporte.lanse@gmail.com</b>. Obrigado!

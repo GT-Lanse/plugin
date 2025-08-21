@@ -3,6 +3,8 @@ namespace block_mad2api;
 defined('MOODLE_INTERNAL') || die();
 
 require_once("$CFG->libdir/externallib.php");
+require_once($CFG->libdir . '/gradelib.php');
+require_once($CFG->libdir . '/weblib.php');
 
 use external_api;
 use external_function_parameters;
@@ -289,7 +291,7 @@ class mad_dashboard extends external_api {
 
   private static function send_settings_to_api()
   {
-    global $DB;
+    global $DB, $CFG;
 
     $apiSettings = $DB->get_records("mad2api_api_settings");
 
@@ -397,7 +399,7 @@ class mad_dashboard extends external_api {
         'students' => self::get_course_students($courseId, $perPage, $offset)
       );
 
-      self::do_post_request("api/v2/courses/${courseId}/students/batch", $data, $courseId);
+      self::do_post_request("api/v2/courses/{$courseId}/students/batch", $data, $courseId);
     }
 
     $courseLog = $DB->get_record(
@@ -415,62 +417,205 @@ class mad_dashboard extends external_api {
     );
   }
 
-  public static function api_send_logs($courseId)
-  {
-    global $DB, $CFG;
+public static function api_send_logs($courseId)
+{
+  global $DB, $CFG;
 
-    $courseLog = $DB->get_record(
-      "mad2api_course_logs", array('course_id' => $courseId, 'status' => 'done')
+  $courseLog = $DB->get_record(
+    "mad2api_course_logs", array('course_id' => $courseId, 'status' => 'done')
+  );
+  if (!!$courseLog) { return; }
+
+  $courseLog = $DB->get_record(
+    "mad2api_course_logs", array('course_id' => $courseId)
+  );
+
+  $countSql = "
+    SELECT COUNT(DISTINCT m.id)
+    FROM {$CFG->prefix}logstore_standard_log m
+    WHERE m.courseid = {$courseId}
+  ";
+  $count = $DB->count_records_sql($countSql);
+  $perPage = 100;
+  $endPage = ceil($count / $perPage);
+
+  echo("Sending {$count} logs \n");
+
+  for ($currentPage = $courseLog->last_log_page; $currentPage <= $endPage; $currentPage++) {
+    $updatedAttributes = array(
+      'id' => $courseLog->id,
+      'last_log_page' => $currentPage,
+      'updated_at' => date('Y-m-d H:i:s')
     );
+    $DB->update_record('mad2api_course_logs', $updatedAttributes, false);
 
-    if (!!$courseLog) {
-      return;
-    }
-
-    $courseLog = $DB->get_record(
-      "mad2api_course_logs", array('course_id' => $courseId)
-    );
-
-    $countSql = "
-      SELECT COUNT(DISTINCT m.id)
+    $offset = ($currentPage - 1) * $perPage;
+    $logs_query = "
+      SELECT m.*
       FROM {$CFG->prefix}logstore_standard_log m
+      INNER JOIN {$CFG->prefix}role_assignments ra ON ra.userid = m.userid
+      INNER JOIN {$CFG->prefix}course mc ON mc.id = m.courseid
       WHERE m.courseid = {$courseId}
+      GROUP BY m.id
+      LIMIT {$perPage} OFFSET {$offset}
     ";
-    $count = $DB->count_records_sql($countSql);
-    $perPage = 100;
-    $endPage = ceil($count / $perPage);
 
-    echo("Sending {$count} logs \n");
+    // Fetch page of logs
+    $logs = $DB->get_records_sql($logs_query);
 
-    for ($currentPage = $courseLog->last_log_page; $currentPage <= $endPage; $currentPage++) {
-      $updatedAttributes = array(
-        'id' => $courseLog->id,
-        'last_log_page' => $currentPage,
-        'updated_at' => date('Y-m-d H:i:s')
-      );
+    // Enrich only course_module_created logs with gradable + activityurl
+    foreach ($logs as $id => $log) {
+      if ($log->eventname !== '\core\event\course_module_created') {
+        continue;
+      }
 
-      $DB->update_record(
-        'mad2api_course_logs', $updatedAttributes, false
-      );
+      $cm = null;
 
-      $offset = ($currentPage - 1) * $perPage;
-      $logs_query = "
-        SELECT m.*
-        FROM {$CFG->prefix}logstore_standard_log m
-        INNER JOIN {$CFG->prefix}role_assignments ra ON ra.userid = m.userid
-        INNER JOIN {$CFG->prefix}course mc ON mc.id = m.courseid
-        WHERE m.courseid = {$courseId}
-        GROUP BY m.id
-        LIMIT {$perPage} OFFSET {$offset}
-      ";
-      $data = array(
-        'logs' => $DB->get_records_sql($logs_query)
-      );
+      // 1) Try via contextinstanceid (usually the course module id for standard logs)
+      if (!empty($log->contextinstanceid)) {
+        // get_coursemodule_from_id($modname=false, $cmid, $courseid=0, $sectionnum=false, $strictness=MUST_EXIST)
+        $cm = get_coursemodule_from_id(false, $log->contextinstanceid, 0, false, IGNORE_MISSING);
+      }
 
-      self::do_post_request("api/v2/courses/{$courseId}/logs/batch", $data, $courseId);
+      // 2) Fallback: parse "other" JSON to find modulename + instanceid
+      if (!$cm && !empty($log->other)) {
+        $otherObj = json_decode($log->other);
+        if ($otherObj) {
+          $modname    = $otherObj->modulename ?? ($otherObj->module ?? null);
+          $instanceid = $otherObj->instanceid ?? ($otherObj->id ?? null);
+          if ($modname && $instanceid) {
+            $cm = get_coursemodule_from_instance($modname, $instanceid, $courseId, false, IGNORE_MISSING);
+          }
+        }
+      }
+
+      if ($cm) {
+        // Compute gradable
+        $grades = grade_get_grades($cm->course, 'mod', $cm->modname, $cm->instance);
+        $gradable = !empty($grades->items);
+
+        // Build activity URL
+        $activityUrl = new moodle_url("/mod/{$cm->modname}/view.php", ['id' => $cm->id]);
+        $activityUrlOut = $activityUrl->out();
+
+        // Attach as top-level convenience fields
+        $log->gradable    = $gradable ? 1 : 0;
+        $log->activityurl = $activityUrlOut;
+
+        // Also merge into the 'other' JSON so downstream can read from there
+        $other = json_decode($log->other, true) ?: [];
+        $other['gradable']    = $log->gradable;
+        $other['url'] = $log->activityurl;
+        $log->other = json_encode($other);
+      } else {
+        // Couldn’t resolve CM; still set predictable keys
+        $log->gradable    = null;
+        $log->url = null;
+      }
+
+      // Save back into the array (since $log is an object reference, this is optional)
+      $logs[$id] = $log;
     }
 
-    self::send_original_course_logs($courseId);
+    $data = array('logs' => $logs);
+
+    echo("Sending page {$currentPage} with " . count($logs) . " logs \n");
+
+    $response = self::do_post_request("api/v2/courses/{$courseId}/logs/batch", $data, $courseId);
+
+    if (isset($response->error) && $response->error) {
+      echo("Error sending logs: " . json_encode($response) . "\n");
+    }
+  }
+
+  self::send_original_course_logs($courseId);
+  self::send_grades($courseId);
+}
+
+  public static function send_grades($courseid) {
+    global $DB, $USER, $CFG;
+
+    echo("sending activities \n");
+
+    $count = $DB->count_records('grade_items', [
+      'courseid' => $courseid,
+      'itemtype' => 'mod'
+    ]);
+
+    $perPage = 25;
+    $endPage = ceil($count / $perPage);
+    $url = "api/v2/courses/{$courseid}/events";
+
+    echo("Sending {$count} grade items for course {$courseid} in {$endPage} pages\n");
+
+    for ($currentPage = 1; $currentPage <= $endPage; $currentPage++) {
+      $offset = ($currentPage - 1) * $perPage;
+
+      $gradeitems = $DB->get_records_sql("
+        SELECT * FROM {$CFG->prefix}grade_items
+        WHERE courseid = :courseid AND itemtype = 'mod'
+      ", ['courseid' => $courseid], $offset, $perPage);
+
+      foreach ($gradeitems as $item) {
+        $modname = $item->itemmodule;
+        $tm = $DB->get_manager();
+
+        if ($modname == 'hvp' && !$tm->table_exists('hvp')) {
+          $modname = 'h5pactivity';
+        }
+
+        if (!$tm->table_exists($modname)) {
+          echo("Module {$modname} does not exist in the database, skipping \n");
+
+          continue;
+        }
+
+        $cm = get_coursemodule_from_instance($modname, $item->iteminstance, $courseid, false, IGNORE_MISSING);
+
+        if (!$cm) {
+          continue;
+        }
+
+        $context = \context_module::instance($cm->id);
+
+        $perPageItemPage = 25;
+        $countItemPage = $DB->count_records('grade_grades', ['itemid' => $item->id,]);
+        $endItemPage = ceil($countItemPage / $perPageItemPage);
+
+        for ($currentItemPage = 1; $currentItemPage <= $endItemPage; $currentItemPage++) {
+          $offsetItemPage = ($currentItemPage - 1) * $perPageItemPage;
+          $grades = $DB->get_records_sql("
+            SELECT * FROM {$CFG->prefix}grade_grades
+            WHERE itemid = :itemid
+          ", ['itemid' => $item->id], $offsetItemPage, $perPageItemPage);
+
+          foreach ($grades as $grade) {
+            $data = [
+              'other' => [
+                'itemname' => $item->itemname,
+                'itemtype' => $item->itemtype,
+                'item_module' => $item->itemmodule,
+                'instance_id' => $context->instanceid,
+                'finalgrade' => $grade->finalgrade
+              ],
+              'action' => 'created',
+              'target' => 'grade_item',
+              'moodle_id' => $courseid,
+              'moodle_user_id' => $USER->id,
+              'moodle_related_user_id' => $grade->userid,
+              'component' => 'core',
+              'event_name' => '\core\event\user_graded',
+              'time_created' => $item->timemodified ?? time(),
+              'context_id' => $context->id,
+            ];
+
+            $data['raw_data'] = $data;
+
+            \block_mad2api\mad_dashboard::do_post_request($url, $data, $courseid);
+          }
+        }
+      }
+    }
   }
 
   public static function send_original_course_logs($courseId)
@@ -516,6 +661,7 @@ class mad_dashboard extends external_api {
 
       if (empty($courseModules)) {
         echo("No course modules found for course {$courseId} \n");
+
         continue;
       }
 
@@ -547,6 +693,18 @@ class mad_dashboard extends external_api {
         }
 
         $cm = get_coursemodule_from_id(false, $courseModule->course_module_id, 0, false, MUST_EXIST);
+        $modname = $cm->modname;
+        $tm = $DB->get_manager();
+
+        if ($modname == 'hvp' && !$tm->table_exists('hvp')) {
+          $modname = 'h5pactivity';
+        }
+
+        if (!$tm->table_exists($modname)) {
+          echo("Module {$modname} does not exist in the database, skipping \n");
+
+          continue;
+        }
 
         $grades = grade_get_grades(
           $cm->course, 'mod', $cm->modname, $cm->instance
@@ -564,7 +722,7 @@ class mad_dashboard extends external_api {
             'visible' => $courseModule->visible,
             'gradable' => !empty($grades->items),
             'duedate' => self::get_activity_duedate($cm),
-            'activityurl' => $activityUrl->out()
+            'url' => $activityUrl->out()
           )),
           'action' => 'created',
           'target' => 'course_module',
@@ -640,7 +798,7 @@ class mad_dashboard extends external_api {
 
     $auth = array(
       'teacherId' => $USER->id,
-      'moodleId' => $courseIdl,
+      'moodleId' => $courseId,
       'email' => $USER->email
     );
 

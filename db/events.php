@@ -33,6 +33,12 @@ $observers = array(
     'priority'  => 1000,
   ),
   array(
+    'eventname' => '\core\event\grade_item_updated',
+    'callback'  => 'block_mad2api_observer::new_event',
+    'internal'  => false,
+    'priority'  => 1000,
+  ),
+  array(
     'eventname' => '\core\event\role_assigned',
     'callback'  => 'block_mad2api_observer::new_user_enrolment_created',
     'internal'  => false,
@@ -91,7 +97,7 @@ $observers = array(
 
   array(
     'eventname' => '\core\event\user_graded',
-    'callback'  => 'block_mad2api_observer::new_event',
+    'callback'  => 'block_mad2api_observer::new_grade',
     'internal'  => false,
     'priority'  => 1000,
   ),
