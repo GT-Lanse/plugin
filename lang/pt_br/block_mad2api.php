@@ -44,3 +44,23 @@ $string['error_modal_body'] = "
   </p>
 ";
 $string['error_alert_body'] = 'Por favor, verifique se o curso que você está tentando habilitar possui as datas de início e término configuradas corretamente. Se o problema persistir, entre em contato conosco em: suporte.lanse@gmail.com. Obrigado!';
+
+$string['privacy:metadata:course_logs'] = 'Registros gerados pelo bloco para auditar interações com a API por usuário/curso.';
+$string['privacy:metadata:course_logs:courseid'] = 'ID do curso relacionado ao registro.';
+$string['privacy:metadata:course_logs:userid'] = 'ID do usuário que originou o evento/exportação.';
+$string['privacy:metadata:course_logs:action'] = 'Ação realizada pela integração (ex.: habilitar, desabilitar, exportar).';
+$string['privacy:metadata:course_logs:payload'] = 'Conteúdo enviado/recebido na chamada à API (pode conter dados pessoais).';
+$string['privacy:metadata:course_logs:status'] = 'Status/resposta do processamento da API.';
+$string['privacy:metadata:course_logs:createdat'] = 'Data/hora de criação do registro.';
+
+$string['privacy:metadata:external'] = 'Este plugin envia dados para um serviço externo (API LANSE / MAD) para prover painéis e análises.';
+$string['privacy:metadata:external:userid'] = 'Identificador do usuário no Moodle.';
+$string['privacy:metadata:external:courseid'] = 'Identificador do curso no Moodle.';
+$string['privacy:metadata:external:fullname'] = 'Nome completo do usuário.';
+$string['privacy:metadata:external:email'] = 'Endereço de e-mail do usuário.';
+$string['privacy:metadata:external:enrolments'] = 'Matrículas do usuário usadas para acesso e permissões no painel externo.';
+$string['privacy:metadata:external:grades'] = 'Informações de notas usadas em análises.';
+$string['privacy:metadata:external:progress'] = 'Informações de progresso/conclusão de atividades.';
+$string['privacy:metadata:external:lastaccess'] = 'Carimbos de última visita usados para indicadores de atividade.';
+
+$string['privacy:export:path'] = 'Dados do bloco MAD2 API';

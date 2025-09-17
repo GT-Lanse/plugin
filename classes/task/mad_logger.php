@@ -33,19 +33,19 @@ class mad_logger extends \core\task\scheduled_task {
         'status' => 'wip'
       );
 
-      echo("Sending data from course #" . $record->course_id . "\n");
+      mtrace("Sending data from course #" . $record->course_id . "\n");
 
       $DB->update_record('mad2api_course_logs', $data);
 
-      echo("course log updated to wip \n");
+      mtrace("course log updated to wip \n");
 
-      echo("sending students \n");
+      mtrace("sending students \n");
       \block_mad2api\mad_dashboard::api_send_students($record->course_id);
 
-      echo("sending logs \n");
+      mtrace("sending logs \n");
       \block_mad2api\mad_dashboard::api_send_logs($record->course_id);
 
-      echo("course logs sent \n");
+      mtrace("course logs sent \n");
 
       $data = array(
         'id' => $record->id,
@@ -56,7 +56,7 @@ class mad_logger extends \core\task\scheduled_task {
 
       $DB->update_record('mad2api_course_logs', $data);
 
-      echo("course log updated to done \n");
+      mtrace("course log updated to done \n");
     }
   }
 }

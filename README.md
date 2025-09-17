@@ -1,30 +1,81 @@
-Moodle Block Template
-=====================
+# LANSE Dashboard Block (block_mad2api)
 
-This is a template for Moodle blocks.
+Bloco para Moodle que integra cursos à plataforma **LANSE**, permitindo habilitar/desabilitar o envio de dados, sincronizar informações e abrir um painel externo via LTI.
 
-It is used by Moosh (http://moosh-online.com/) to generate new block plugins.
+---
 
-* This template assumes that the block is using a textual content type by default. If you want your block to display a list of items (using $this->content->items and $this->content->icons instead of $this->content->text), change the derived class of the block, from extends block_base to extends block_list. For more information: https://docs.moodle.org/dev/Blocks#Additional_Content_Types.
+## ✨ Funcionalidades
 
-* Go to Settings > Site Administration > Development > XMLDB editor and modify the module's tables.
+- Exibe botões no curso:
+  - **Abrir Dashboard**: abre o painel LANSE (via `view.php` + LTI).
+  - **Habilitar/Desabilitar** o envio de dados do curso para a API.
+  - **Carregar Dados Agora**: força a sincronização manual com a API.
+- Sincronização agendada (via *Scheduled tasks*):
+  - **Agências** (`block_mad2api\task\mad_agencies`)
+  - **Boletos** (`block_mad2api\task\mad_bills`)
+  - **Logs de curso** (`block_mad2api\task\mad_logger`)
+  - **Transferências** (`block_mad2api\task\mad_transfer`)
+- Observa eventos do Moodle (inscrição, conclusão de atividades, notas) e registra em `block_mad2api_course_logs`.
+- Suporte a **LTI 1.3** para abertura do dashboard.
+- Implementação da **Privacy API**, com exportação e eliminação de dados pessoais.
+- Suporte a **AMD/RequireJS** para chamadas AJAX.
 
-* Modify version.php and set the initial version of you module.
+---
 
-* Visit Settings > Site Administration > Notifications, you should find
-the module's tables successfully created
+## 📦 Requisitos
 
-* Go to Site Administration > Plugins > Blocks > Manage blocks
-and you should find that this newblock has been added to the list of
-installed modules.
+- Moodle **4.1 – 4.4** (ajuste conforme sua instalação)
+- PHP **>= 8.0**
+- Plugin **block_lti** habilitado
+- Recomenda-se rodar `cron.php` regularmente para execução das tarefas agendadas.
 
-* You may now proceed to run your own code in an attempt to develop
-your module. You will probably want to modify block_newmodule.php
-and edit_form.php as a first step. Check db/access.php to add
-capabilities.
+---
 
-We encourage you to share your code and experience - visit http://moodle.org
+## ⚙️ Instalação
 
-Good luck!
+1. Baixe ou clone este repositório.
+2. Copie a pasta para: `moodle/blocks/mad2api`
+3. Acesse **Administração do site → Notificações** para instalar.  
+4. Configure o plugin em **Administração do site → Plugins → Blocos → LANSE Dashboard**.
 
-[![Build Status](https://travis-ci.org/danielneis/moodle-block_newblock.svg?branch=master)](https://travis-ci.org/danielneis/moodle-block_newblock)
+---
+
+## 🔧 Configuração
+
+- **Configurações globais**  
+- `API URL`: endpoint da API LANSE/MAD.  
+- `Access Key` e `Secret Key`: credenciais da integração.  
+- `User Roles`: papéis do Moodle autorizados a visualizar o bloco (ex.: professor, coordenador).  
+
+- **Configuração por curso**  
+- Adicione o bloco **LANSE Dashboard** na página do curso.  
+- Use os botões para habilitar ou desabilitar a integração no curso.  
+- Clique em *Carregar Dados Agora* para enviar dados manuais à API.
+
+---
+
+## 🔒 Privacidade
+
+Este plugin armazena e exporta **dados pessoais** para a plataforma **LANSE**.
+
+- **Armazenados localmente em `block_mad2api_course_logs`:**
+- `userid`, `courseid`, `action`, `payload`, `status`, `createdat`.
+
+- **Enviados a serviços externos (LANSE/MAD API):**
+- Identificador do usuário  
+- Nome completo  
+- Endereço de e-mail  
+- Matrículas  
+- Notas  
+- Progresso em atividades  
+- Último acesso  
+
+O plugin implementa os provedores da **Moodle Privacy API** para exportação e eliminação desses dados.
+
+---
+
+## 🔐 Permissões
+
+- `block/mad2api:addinstance` – adicionar o bloco a cursos.  
+- `block/mad2api:myaddinstance` – adicionar ao *Painel do Usuário*.  
+- `block/mad2api:view` – visualizar e usar o bloco.

@@ -60,4 +60,16 @@ $capabilities = array(
 
         'clonepermissionsfrom' => 'moodle/site:manageblocks'
     ),
+
+    'block/mad2api:view' => [
+        'captype'      => 'read',
+        'contextlevel' => CONTEXT_COURSE,
+        'archetypes'   => [
+            'teacher'        => CAP_ALLOW,
+            'editingteacher' => CAP_ALLOW,
+            'manager'        => CAP_ALLOW,
+        ],
+        // Herdável por papéis no curso.
+        'clonepermissionsfrom' => 'moodle/course:view',
+    ],
 );
