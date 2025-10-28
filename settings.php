@@ -31,12 +31,12 @@ $settings->add(new admin_setting_configtext('mad2api/organization',
 $settings->add(new admin_setting_configtext('mad2api/api_url',
                                                'URL da API',
                                                '',
-                                               'https://api.lanse.com.br'));
+                                               'https://lanse.sites.ufsc.br/api'));
 
 $settings->add(new admin_setting_configtext('mad2api/app_url',
                                                'URL da plataforma',
                                                '',
-                                               'https://app.lanse.com.br'));
+                                               'https://lanse.sites.ufsc.br'));
 
 $apiKey = new admin_setting_configtext(
   'mad2api/api_key',
