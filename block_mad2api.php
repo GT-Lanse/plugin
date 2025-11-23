@@ -1,14 +1,27 @@
 <?php
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
 /**
- * Block: LANSE Dashboard (block_mad2api)
- *
  * Renders buttons to access the dashboard, enable/disable course monitoring,
  * and trigger data loading, with role checking and AJAX integrations.
  *
  * @package   block_mad2api
- * @copyright ...
- * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
-*/
+ * @copyright 2025
+ * @license   https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -95,16 +108,16 @@ class block_mad2api extends block_base {
             return $this->content;
         }
 
-        $appUrl = get_config('mad2api', 'app_url');
+        $appurl = get_config('block_mad2api', 'appurl');
 
-        $lti_url = new moodle_url('/blocks/mad2api/view.php', array(
+        $ltiurl = new moodle_url('/blocks/mad2api/view.php', array(
             'courseid'   => $COURSE->id,
             'coursename' => format_string($COURSE->fullname)
         ));
 
-        $enabled = $DB->get_record('mad2api_dashboard_settings', array(
-            'course_id'  => $COURSE->id,
-            'is_enabled' => 1
+        $enabled = $DB->get_record('block_mad2api_dashboard_settings', array(
+            'courseid'  => $COURSE->id,
+            'isenabled' => 1
         ));
 
         if ($enabled) {
@@ -113,7 +126,7 @@ class block_mad2api extends block_base {
         }
 
         $openbtn = html_writer::link(
-            $lti_url,
+            $ltiurl,
             get_string('access_dashboard', 'block_mad2api'),
             array(
                 'class' => 'btn btr-primary',
@@ -129,7 +142,7 @@ class block_mad2api extends block_base {
             get_string('open_dashboard', 'block_mad2api'),
             array(
                 'id'    => 'access-dashboard',
-                'href'  => $appUrl,
+                'href'  => $appurl,
                 'class' => 'plugin-link btn',
                 'style' => 'width:100%;margin:10px 0;color:#04626a;border:3px solid #04626a;'
             )

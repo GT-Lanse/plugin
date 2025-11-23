@@ -52,7 +52,7 @@ class provider implements
      * @return collection
      */
     public static function get_metadata(collection $items): collection {
-        $items->add_database_table('mad2api_course_logs', [
+        $items->add_database_table('block_mad2api_course_logs', [
             'courseid'   => 'privacy:metadata:course_logs:courseid',
             'userid'     => 'privacy:metadata:course_logs:userid',
             'action'     => 'privacy:metadata:course_logs:action',
@@ -78,7 +78,7 @@ class provider implements
     /**
      * Returns list of contexts containing user data.
      *
-     * We assume data is per course (context_course) in mad2api_course_logs.
+     * We assume data is per course (context_course) in block_mad2api_course_logs.
      *
      * @param int $userid
      * @return contextlist
@@ -90,7 +90,7 @@ class provider implements
         $sql = "SELECT ctx.id
                   FROM {context} ctx
                   JOIN {course} c ON c.id = ctx.instanceid AND ctx.contextlevel = :contextlevel
-                  JOIN {mad2api_course_logs} l ON l.courseid = c.id
+                  JOIN {block_mad2api_course_logs} l ON l.courseid = c.id
                  WHERE l.userid = :userid";
         $params = [
             'contextlevel' => CONTEXT_COURSE,
@@ -121,7 +121,7 @@ class provider implements
             }
             $courseid = $context->instanceid;
 
-            $logs = $DB->get_records('mad2api_course_logs', [
+            $logs = $DB->get_records('block_mad2api_course_logs', [
                 'courseid' => $courseid,
                 'userid'   => $userid,
             ], 'id ASC');
@@ -163,7 +163,7 @@ class provider implements
             if ($context->contextlevel !== CONTEXT_COURSE) {
                 continue;
             }
-            $DB->delete_records('mad2api_course_logs', [
+            $DB->delete_records('block_mad2api_course_logs', [
                 'courseid' => $context->instanceid,
                 'userid'   => $userid,
             ]);
@@ -186,7 +186,7 @@ class provider implements
         }
 
         $sql = "SELECT DISTINCT l.userid
-                  FROM {mad2api_course_logs} l
+                  FROM {block_mad2api_course_logs} l
                   JOIN {course} c ON c.id = l.courseid
                  WHERE c.id = :courseid";
         $params = ['courseid' => $context->instanceid];
@@ -216,7 +216,7 @@ class provider implements
         $params = array_merge(['courseid' => $context->instanceid], $inparams);
 
         $DB->delete_records_select(
-            'mad2api_course_logs',
+            'block_mad2api_course_logs',
             "courseid = :courseid AND userid $insql",
             $params
         );
@@ -234,6 +234,6 @@ class provider implements
             return;
         }
 
-        $DB->delete_records('mad2api_course_logs', ['courseid' => $context->instanceid]);
+        $DB->delete_records('block_mad2api_course_logs', ['courseid' => $context->instanceid]);
     }
 }

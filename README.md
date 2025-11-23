@@ -15,7 +15,7 @@ Bloco para Moodle que integra cursos à plataforma **LANSE**, permitindo habilit
   - **Boletos** (`block_mad2api\task\mad_bills`)
   - **Logs de curso** (`block_mad2api\task\mad_logger`)
   - **Transferências** (`block_mad2api\task\mad_transfer`)
-- Observa eventos do Moodle (inscrição, conclusão de atividades, notas) e registra em `block_mad2api_course_logs`.
+- Observa eventos do Moodle (inscrição, conclusão de atividades, notas) e registra em `block_block_mad2api_course_logs`.
 - Suporte a **LTI 1.3** para abertura do dashboard.
 - Implementação da **Privacy API**, com exportação e eliminação de dados pessoais.
 - Suporte a **AMD/RequireJS** para chamadas AJAX.
@@ -26,7 +26,6 @@ Bloco para Moodle que integra cursos à plataforma **LANSE**, permitindo habilit
 
 - Moodle **4.1 – 4.4** (ajuste conforme sua instalação)
 - PHP **>= 8.0**
-- Plugin **block_lti** habilitado
 - Recomenda-se rodar `cron.php` regularmente para execução das tarefas agendadas.
 
 ---
@@ -58,7 +57,7 @@ Bloco para Moodle que integra cursos à plataforma **LANSE**, permitindo habilit
 
 Este plugin armazena e exporta **dados pessoais** para a plataforma **LANSE**.
 
-- **Armazenados localmente em `block_mad2api_course_logs`:**
+- **Armazenados localmente em `block_block_mad2api_course_logs`:**
 - `userid`, `courseid`, `action`, `payload`, `status`, `createdat`.
 
 - **Enviados a serviços externos (LANSE/MAD API):**

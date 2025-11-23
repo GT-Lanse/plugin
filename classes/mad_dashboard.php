@@ -1,4 +1,27 @@
 <?php
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+/**
+ * MAD Dashboard external API.
+ *
+ * @package   block_mad2api
+ * @copyright 2025
+ * @license   https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 namespace block_mad2api;
 
 defined('MOODLE_INTERNAL') || die();
@@ -29,7 +52,7 @@ class mad_dashboard extends external_api {
     */
     public static function enable_parameters() {
         return new external_function_parameters([
-            'courseId' => new external_value(PARAM_INT, 'Course id', VALUE_DEFAULT, 0),
+            'courseid' => new external_value(PARAM_INT, 'Course id', VALUE_DEFAULT, 0),
         ]);
     }
 
@@ -51,20 +74,20 @@ class mad_dashboard extends external_api {
     /**
      * Enables the dashboard for a given course.
      *
-     * @param int $courseId The ID of the course to enable the dashboard for.
+     * @param int $courseid The ID of the course to enable the dashboard for.
      * @return array An array containing the status of the operation and the URL if successful.
      * @throws \moodle_exception If there is an error during the process.
     */
-    public static function enable($courseId) {
+    public static function enable($courseid) {
         global $DB, $USER;
 
-        $params = self::validate_parameters(self::enable_parameters(), ['courseId' => $courseId]);
-        $courseId = (int)$params['courseId'];
+        $params = self::validate_parameters(self::enable_parameters(), ['courseid' => $courseid]);
+        $courseid = (int)$params['courseid'];
 
-        $dashboardSetting = $DB->get_record('mad2api_dashboard_settings', ['course_id' => $courseId]);
+        $dashboardsetting = $DB->get_record('block_mad2api_dashboard_settings', ['courseid' => $courseid]);
 
-        if ($dashboardSetting && (int)$dashboardSetting->is_enabled === 1) {
-            $response = self::api_dashboard_auth_url($courseId);
+        if ($dashboardsetting && (int)$dashboardsetting->isenabled === 1) {
+            $response = self::api_dashboard_auth_url($courseid);
 
             if (empty($response) || !is_object($response) || !property_exists($response, 'url')) {
                 return [['enabled' => false, 'url' => '', 'error' => true]];
@@ -72,43 +95,44 @@ class mad_dashboard extends external_api {
             return [['enabled' => true, 'url' => $response->url, 'error' => false]];
         }
 
-        $databaseResponse = false;
-        $response = self::api_enable_call($courseId);
+        $databaseresponse = false;
+        $response = self::api_enable_call($courseid);
 
         if ($response === null || !property_exists($response, 'url')) {
             return [['enabled' => false, 'url' => '', 'error' => true]];
         }
 
-        $recordDashboardSettings = [
-            'created_at' => date('Y-m-d H:i:s'),
-            'updated_at' => date('Y-m-d H:i:s'),
-            'course_id'  => $courseId,
-            'is_enabled' => 1,
+        $recorddatabasesettings = [
+            'createdat' => date('Y-m-d H:i:s'),
+            'updatedat' => date('Y-m-d H:i:s'),
+            'courseid'  => $courseid,
+            'isenabled' => 1,
             'token'      => $USER->email,
         ];
 
-        if (!empty($dashboardSetting->id)) {
-            $recordDashboardSettings['id'] = $dashboardSetting->id;
-            $databaseResponse = $DB->update_record('mad2api_dashboard_settings', $recordDashboardSettings, false);
+        if (!empty($dashboardsetting->id)) {
+            $recorddatabasesettings['id'] = $dashboardsetting->id;
+            $databaseresponse = $DB->update_record('block_mad2api_dashboard_settings', $recorddatabasesettings, false);
         } else {
-            $databaseResponse = (bool)$DB->insert_record('mad2api_dashboard_settings', $recordDashboardSettings, false);
+            $databaseresponse = (bool)$DB->insert_record('block_mad2api_dashboard_settings', $recorddatabasesettings, false);
         }
 
-        $recordCourseLogs = [
-            'created_at'   => date('Y-m-d H:i:s'),
-            'updated_at'   => date('Y-m-d H:i:s'),
-            'course_id'    => $courseId,
+        $recordcourselog = [
+            'createdat'   => date('Y-m-d H:i:s'),
+            'updatedat'   => date('Y-m-d H:i:s'),
+            'courseid'    => $courseid,
             'status'       => 'todo',
-            'last_log_page'=> 1,
-            'students_sent'=> 0,
+            'lastlogpage'=> 1,
+            'studentssent'=> 0,
         ];
 
-        $courseLog = $DB->get_record('mad2api_course_logs', ['course_id' => $courseId]);
-        if (empty($courseLog->id)) {
-            $DB->insert_record('mad2api_course_logs', $recordCourseLogs, false);
+        $courselog = $DB->get_record('block_mad2api_course_logs', ['courseid' => $courseid]);
+
+        if (empty($courselog->id)) {
+            $DB->insert_record('block_mad2api_course_logs', $recordcourselog, false);
         }
 
-        return [['enabled' => $databaseResponse, 'url' => $response->url, 'error' => false]];
+        return [['enabled' => $databaseresponse, 'url' => $response->url, 'error' => false]];
     }
 
     /**
@@ -118,7 +142,7 @@ class mad_dashboard extends external_api {
     */
     public static function disable_parameters() {
         return new external_function_parameters([
-            'courseId' => new external_value(PARAM_INT, 'Course id', VALUE_DEFAULT, 0),
+            'courseid' => new external_value(PARAM_INT, 'Course id', VALUE_DEFAULT, 0),
         ]);
     }
 
@@ -138,30 +162,30 @@ class mad_dashboard extends external_api {
     /**
      * Disables the dashboard for a given course.
      *
-     * @param int $courseId The ID of the course to disable the dashboard for.
+     * @param int $courseid The ID of the course to disable the dashboard for.
      * @return array An array containing the status of the operation.
      * @throws \moodle_exception If there is an error during the process.
     */
-    public static function disable($courseId) {
+    public static function disable($courseid) {
         global $DB;
 
-        $params = self::validate_parameters(self::disable_parameters(), ['courseId' => $courseId]);
-        $courseId = (int)$params['courseId'];
+        $params = self::validate_parameters(self::disable_parameters(), ['courseid' => $courseid]);
+        $courseid = (int)$params['courseid'];
 
-        $dashboardSetting = $DB->get_record('mad2api_dashboard_settings', ['course_id' => $courseId]);
+        $dashboardSetting = $DB->get_record('block_mad2api_dashboard_settings', ['courseid' => $courseid]);
 
-        $databaseResponse = false;
+        $databaseresponse = false;
         if (!empty($dashboardSetting->id)) {
             $data = [
                 'id'         => $dashboardSetting->id,
-                'course_id'  => $courseId,
-                'updated_at' => date('Y-m-d H:i:s'),
-                'is_enabled' => 0
+                'courseid'  => $courseid,
+                'updatedat' => date('Y-m-d H:i:s'),
+                'isenabled' => 0
             ];
-            $databaseResponse = $DB->update_record('mad2api_dashboard_settings', $data);
+            $databaseresponse = $DB->update_record('block_mad2api_dashboard_settings', $data);
         }
 
-        return [['disabled' => (bool)$databaseResponse]];
+        return [['disabled' => (bool)$databaseresponse]];
     }
 
     /**
@@ -176,6 +200,7 @@ class mad_dashboard extends external_api {
 
         if (empty($response->data)) {
             echo("No pending activities found \n");
+
             return;
         }
 
@@ -186,22 +211,23 @@ class mad_dashboard extends external_api {
                 continue;
             }
 
-            $courseModule = $DB->get_record('course_modules', ['id' => (int)$activity->contextInstanceId]);
+            $coursemodule = $DB->get_record('course_modules', ['id' => (int)$activity->contextInstanceId]);
 
-            if (empty($courseModule) || empty($courseModule->instance)) {
+            if (empty($coursemodule) || empty($coursemodule->instance)) {
                 echo("Course module not found for activity #{$activity->contextInstanceId} \n");
 
                 continue;
             }
 
-            $tableName = strtolower($activity->type);
+            $tablename = strtolower($activity->type);
 
-            echo("Searching on table {{$tableName}} for activity #{$courseModule->instance} \n");
+            echo("Searching on table {{$tablename}} for activity #{$coursemodule->instance} \n");
 
-            $instance = $DB->get_record($tableName, ['id' => (int)$courseModule->instance]);
+            $instance = $DB->get_record($tablename, ['id' => (int)$coursemodule->instance]);
 
             if (empty($instance)) {
                 echo("Instance not found for activity #{$activity->contextInstanceId} \n");
+
                 continue;
             }
 
@@ -213,48 +239,49 @@ class mad_dashboard extends external_api {
 
     /**
      * Send activity name to API.
-     * @param int $courseId The ID of the course.
-     * @param int $contextId The context ID of the activity.
+     * @param int $courseid The ID of the course.
+     * @param int $contextid The context ID of the activity.
      * @param string $name The name of the activity.
      * @return void
     */
-    public static function send_activity_name($courseId, $contextId, $name) {
-        self::do_put_request("api/v3/courses/{$courseId}/activities/{$contextId}", ['name' => $name]);
+    public static function send_activity_name($courseid, $contextid, $name) {
+        self::do_put_request("api/v3/courses/{$courseid}/activities/{$contextid}", ['name' => $name]);
     }
 
     /**
      * Checks if the course data needs to be resent to the API and updates the course log accordingly.
      *
-     * @param int $courseId The ID of the course to check.
+     * @param int $courseid The ID of the course to check.
      * @return void
     */
-    public static function check_data_on_api($courseId) {
+    public static function check_data_on_api($courseid) {
         global $DB;
 
-        $lastlogs = array_slice($DB->get_records('mad2api_course_logs', ['course_id' => (int)$courseId, 'status' => 'done']), -1);
-        $courseLog = !empty($lastlogs) ? $lastlogs[0] : null;
+        $lastlogs = array_slice($DB->get_records('block_mad2api_course_logs', ['courseid' => (int)$courseid, 'status' => 'done']), -1);
+        $courselog = !empty($lastlogs) ? $lastlogs[0] : null;
 
-        if (!$courseLog) {
-            echo("Course log not found for course #{$courseId} \n");
+        if (!$courselog) {
+            echo("Course log not found for course #{$courseid} \n");
+
             return;
         }
 
-        $response = self::api_check_course_data((int)$courseId);
+        $response = self::api_check_course_data((int)$courseid);
 
         if ($response && !empty($response->resend_data)) {
-            echo("Resend data enabled for course #{$courseId} \n");
+            echo("Resend data enabled for course #{$courseid} \n");
 
-            self::api_enable_call((int)$courseId);
+            self::api_enable_call((int)$courseid);
 
-            $updatedAttributes = [
-                'id'            => $courseLog->id,
+            $updatedattributes = [
+                'id'            => $courselog->id,
                 'status'        => 'todo',
-                'students_sent' => 0,
-                'last_log_page' => 1,
-                'updated_at'    => date('Y-m-d H:i:s')
+                'studentssent' => 0,
+                'lastlogpage' => 1,
+                'updatedat'    => date('Y-m-d H:i:s')
             ];
 
-            $DB->update_record('mad2api_course_logs', $updatedAttributes, false);
+            $DB->update_record('block_mad2api_course_logs', $updatedattributes, false);
         }
     }
 
@@ -266,16 +293,16 @@ class mad_dashboard extends external_api {
     public static function is_current_user_course_teacher($contextid) {
         global $USER;
 
-        $isPermitted = false;
-        $permittedRoles = self::parse_role_ids_list((string)get_config('mad2api', 'roles'));
+        $ispermitted = false;
+        $permittedroles = self::parse_role_ids_list((string)get_config('block_mad2api', 'roles'));
 
         foreach (self::get_user_roles($USER->id, $contextid) as $user_role) {
-            if (in_array((int)$user_role->roleid, $permittedRoles, true)) {
-                $isPermitted = true;
+            if (in_array((int)$user_role->roleid, $permittedroles, true)) {
+                $ispermitted = true;
             }
         }
 
-        return $isPermitted;
+        return $ispermitted;
     }
 
     /**
@@ -286,16 +313,16 @@ class mad_dashboard extends external_api {
     public static function is_current_user_course_coordinator($contextid) {
         global $USER;
 
-        $isPermitted = false;
-        $permittedRoles = self::parse_role_ids_list((string)get_config('mad2api', 'admin_roles'));
+        $ispermitted = false;
+        $permittedroles = self::parse_role_ids_list((string)get_config('block_mad2api', 'adminroles'));
 
         foreach (self::get_user_roles($USER->id, $contextid) as $user_role) {
-            if (in_array((int)$user_role->roleid, $permittedRoles, true)) {
-                $isPermitted = true;
+            if (in_array((int)$user_role->roleid, $permittedroles, true)) {
+                $ispermitted = true;
             }
         }
 
-        return $isPermitted;
+        return $ispermitted;
     }
 
     /**
@@ -320,19 +347,19 @@ class mad_dashboard extends external_api {
     private static function send_settings_to_api() {
         global $DB, $CFG;
 
-        $apiSettings = $DB->get_records('mad2api_api_settings');
-        $apiSetting = $apiSettings ? array_values($apiSettings)[0] : null;
+        $apisettings = $DB->get_records('block_mad2api_api_settings');
+        $apisetting = $apisettings ? array_values($apisettings)[0] : null;
 
-        if (!$apiSetting || (substr((string)$apiSetting->sent_at, 0, 10) === date('Y-m-d'))) {
+        if (!$apisetting || (substr((string)$apisetting->sentat, 0, 10) === date('Y-m-d'))) {
             return;
         }
 
-        $updatedAttributes = [
-            'id'         => $apiSetting->id,
-            'sent_at'    => date('Y-m-d H:i:s'),
-            'updated_at' => date('Y-m-d H:i:s')
+        $updatedattributes = [
+            'id'         => $apisetting->id,
+            'sentat'    => date('Y-m-d H:i:s'),
+            'updatedat' => date('Y-m-d H:i:s')
         ];
-        $DB->update_record('mad2api_api_settings', $updatedAttributes, false);
+        $DB->update_record('block_mad2api_api_settings', $updatedattributes, false);
 
         $settings = [
             'pluginVersion'  => \core_plugin_manager::instance()->get_plugin_info('block_mad2api')->release,
@@ -362,16 +389,16 @@ class mad_dashboard extends external_api {
     /**
      * Enables a course in the external API and sends necessary data.
      *
-     * @param int $courseId The ID of the course to enable.
+     * @param int $courseid The ID of the course to enable.
      * @return object|null The response data from the API or null on failure.
      * @throws \moodle_exception If there is an error during the process.
     */
-    public static function api_enable_call($courseId) {
+    public static function api_enable_call($courseid) {
         global $USER, $DB;
 
-        $courseId = (int)$courseId;
-        $course = $DB->get_record('course', ['id' => $courseId], '*', MUST_EXIST);
-        $courseUrl = new \moodle_url('/course/view.php', ['id' => $courseId]);
+        $courseid = (int)$courseid;
+        $course = $DB->get_record('course', ['id' => $courseid], '*', MUST_EXIST);
+        $courseurl = new \moodle_url('/course/view.php', ['id' => $courseid]);
 
         $enable = [
             'course' => [
@@ -379,20 +406,20 @@ class mad_dashboard extends external_api {
                 'endDate'   => $course->enddate,
                 'name'      => $course->fullname,
                 'shortName' => $course->shortname,
-                'url'       => $courseUrl->out(),
+                'url'       => $courseurl->out(),
             ],
-            'teachers'      => self::get_course_teachers($courseId),
-            'coordinators'  => self::get_course_coordinators($courseId),
+            'teachers'      => self::get_course_teachers($courseid),
+            'coordinators'  => self::get_course_coordinators($courseid),
             'currentUserId' => $USER->id ?? null,
         ];
 
         $auth = [
             'teacherId' => $USER->id,
-            'moodleId'  => $courseId,
+            'moodleId'  => $courseid,
             'email'     => $USER->email,
         ];
 
-        self::do_post_request("api/v3/courses/{$courseId}/enable", $enable);
+        self::do_post_request("api/v3/courses/{$courseid}/enable", $enable);
         self::send_settings_to_api();
 
         $resp = self::do_post_request('api/v2/authorize', $auth);
@@ -402,11 +429,11 @@ class mad_dashboard extends external_api {
 
     /**
      * Checks if the course data needs to be resent to the API.
-     * @param int $courseId The ID of the course to check.
+     * @param int $courseid The ID of the course to check.
      * @return object|null The response data from the API or null on failure.
     */
-    public static function api_check_course_data($courseId) {
-        return self::do_get_request("api/v2/plugin/courses/{$courseId}/resend_data");
+    public static function api_check_course_data($courseid) {
+        return self::do_get_request("api/v2/plugin/courses/{$courseid}/resend_data");
     }
 
     /**
@@ -419,94 +446,94 @@ class mad_dashboard extends external_api {
 
     /**
      * Sends the list of students enrolled in a course to the external API in batches.
-     * @param int $courseId The ID of the course.
+     * @param int $courseid The ID of the course.
      * @return void
     */
-    public static function api_send_students($courseId) {
+    public static function api_send_students($courseid) {
         global $DB, $USER;
 
-        $courseId = (int)$courseId;
+        $courseid = (int)$courseid;
 
-        $courseLog = $DB->get_record('mad2api_course_logs', ['course_id' => $courseId, 'students_sent' => 1]);
+        $courselog = $DB->get_record('block_mad2api_course_logs', ['courseid' => $courseid, 'studentssent' => 1]);
 
-        if ($courseLog) {
+        if ($courselog) {
             return;
         }
 
-        $count = self::get_course_students_count($courseId);
-        $perPage = 20;
-        $endPage = (int)ceil($count / $perPage);
+        $count = self::get_course_students_count($courseid);
+        $perpage = 20;
+        $endpage = (int)ceil($count / $perpage);
 
-        for ($currentPage = 1; $currentPage <= $endPage; $currentPage++) {
-            $offset = ($currentPage - 1) * $perPage;
+        for ($currentpage = 1; $currentpage <= $endpage; $currentpage++) {
+            $offset = ($currentpage - 1) * $perpage;
 
             $data = [
-                'students' => self::get_course_students($courseId, $perPage, $offset)
+                'students' => self::get_course_students($courseid, $perpage, $offset)
             ];
 
-            self::do_post_request("api/v2/courses/{$courseId}/students/batch", $data, $courseId);
+            self::do_post_request("api/v2/courses/{$courseid}/students/batch", $data, $courseid);
         }
 
-        $courseLog = $DB->get_record('mad2api_course_logs', ['course_id' => $courseId]);
+        $courselog = $DB->get_record('block_mad2api_course_logs', ['courseid' => $courseid]);
 
-        if ($courseLog) {
-            $updatedAttributes = [
-                'id'            => $courseLog->id,
-                'students_sent' => 1,
-                'updated_at'    => date('Y-m-d H:i:s')
+        if ($courselog) {
+            $updatedattributes = [
+                'id'            => $courselog->id,
+                'studentssent' => 1,
+                'updatedat'    => date('Y-m-d H:i:s')
             ];
-            $DB->update_record('mad2api_course_logs', $updatedAttributes, false);
+
+            $DB->update_record('block_mad2api_course_logs', $updatedattributes, false);
         }
     }
 
-
     /**
      * Sends the course logs to the external API in batches.
-     * @param int $courseId The ID of the course.
+     * @param int $courseid The ID of the course.
      * @return void
     */
-    public static function api_send_logs($courseId) {
+    public static function api_send_logs($courseid) {
         global $DB;
 
-        $courseId = (int)$courseId;
+        $courseid = (int)$courseid;
 
-        $courseLog = $DB->get_record('mad2api_course_logs', ['course_id' => $courseId, 'status' => 'done']);
+        $courselog = $DB->get_record('block_mad2api_course_logs', ['courseid' => $courseid, 'status' => 'done']);
 
-        if ($courseLog) { return; }
+        if ($courselog) { return; }
 
-        $courseLog = $DB->get_record('mad2api_course_logs', ['course_id' => $courseId]);
+        $courselog = $DB->get_record('block_mad2api_course_logs', ['courseid' => $courseid]);
 
         $count = $DB->count_records_sql("
             SELECT COUNT(DISTINCT m.id)
               FROM {logstore_standard_log} m
              WHERE m.courseid = :courseid
-        ", ['courseid' => $courseId]);
+        ", ['courseid' => $courseid]);
 
-        $perPage = 100;
-        $endPage = (int)ceil($count / $perPage);
+        $perpage = 100;
+        $endpage = (int)ceil($count / $perpage);
 
         echo("Sending {$count} logs \n");
 
-        $startPage = !empty($courseLog->last_log_page) ? (int)$courseLog->last_log_page : 1;
+        $startPage = !empty($courselog->lastlogpage) ? (int)$courselog->lastlogpage : 1;
 
-        for ($currentPage = $startPage; $currentPage <= $endPage; $currentPage++) {
-            if ($courseLog) {
-                $updatedAttributes = [
-                    'id'            => $courseLog->id,
-                    'last_log_page' => $currentPage,
-                    'updated_at'    => date('Y-m-d H:i:s')
+        for ($currentpage = $startPage; $currentpage <= $endpage; $currentpage++) {
+            if ($courselog) {
+                $updatedattributes = [
+                    'id'            => $courselog->id,
+                    'lastlogpage' => $currentpage,
+                    'updatedat'    => date('Y-m-d H:i:s')
                 ];
-                $DB->update_record('mad2api_course_logs', $updatedAttributes, false);
+                $DB->update_record('block_mad2api_course_logs', $updatedattributes, false);
             }
 
-            $offset = ($currentPage - 1) * $perPage;
+            $offset = ($currentpage - 1) * $perpage;
 
             $logs = $DB->get_records_sql("
                 SELECT m.*
                   FROM {logstore_standard_log} m
                  WHERE m.courseid = :courseid
                  GROUP BY m.id
-            ", ['courseid' => $courseId], $offset, $perPage);
+            ", ['courseid' => $courseid], $offset, $perpage);
 
             foreach ($logs as $id => $log) {
                 if ($log->eventname !== '\core\event\course_module_created') {
@@ -527,7 +554,7 @@ class mad_dashboard extends external_api {
                         $instanceid = $otherObj->instanceid ?? ($otherObj->id ?? null);
 
                         if ($modname && $instanceid) {
-                            $cm = get_coursemodule_from_instance($modname, $instanceid, $courseId, false, IGNORE_MISSING);
+                            $cm = get_coursemodule_from_instance($modname, $instanceid, $courseid, false, IGNORE_MISSING);
                         }
                     }
                 }
@@ -536,10 +563,10 @@ class mad_dashboard extends external_api {
                     $grades = grade_get_grades($cm->course, 'mod', $cm->modname, $cm->instance);
                     $gradable = !empty($grades->items);
 
-                    $activityUrlOut = (new \moodle_url("/mod/{$cm->modname}/view.php", ['id' => $cm->id]))->out();
+                    $activityurlout = (new \moodle_url("/mod/{$cm->modname}/view.php", ['id' => $cm->id]))->out();
 
                     $log->gradable    = $gradable ? 1 : 0;
-                    $log->activityurl = $activityUrlOut;
+                    $log->activityurl = $activityurlout;
 
                     $other = json_decode($log->other, true) ?: [];
                     $other['gradable'] = $log->gradable;
@@ -555,17 +582,17 @@ class mad_dashboard extends external_api {
 
             $data = ['logs' => $logs];
 
-            echo("Sending page {$currentPage} with " . count($logs) . " logs \n");
+            echo("Sending page {$currentpage} with " . count($logs) . " logs \n");
 
-            $response = self::do_post_request("api/v2/courses/{$courseId}/logs/batch", $data, $courseId);
+            $response = self::do_post_request("api/v2/courses/{$courseid}/logs/batch", $data, $courseid);
 
             if (!empty($response->error)) {
                 echo("Error sending logs: " . json_encode($response) . "\n");
             }
         }
 
-        self::send_original_course_logs($courseId);
-        self::send_grades($courseId);
+        self::send_original_course_logs($courseid);
+        self::send_grades($courseid);
     }
 
     /**
@@ -585,20 +612,20 @@ class mad_dashboard extends external_api {
             'itemtype' => 'mod'
         ]);
 
-        $perPage = 25;
-        $endPage = (int)ceil($count / $perPage);
+        $perpage = 25;
+        $endpage = (int)ceil($count / $perpage);
         $url = "api/v2/courses/{$courseid}/events";
 
-        echo("Sending {$count} grade items for course {$courseid} in {$endPage} pages\n");
+        echo("Sending {$count} grade items for course {$courseid} in {$endpage} pages\n");
 
-        for ($currentPage = 1; $currentPage <= $endPage; $currentPage++) {
-            $offset = ($currentPage - 1) * $perPage;
+        for ($currentpage = 1; $currentpage <= $endpage; $currentpage++) {
+            $offset = ($currentpage - 1) * $perpage;
 
             $gradeitems = $DB->get_records_sql("
                 SELECT *
                   FROM {grade_items}
                  WHERE courseid = :courseid AND itemtype = 'mod'
-            ", ['courseid' => $courseid], $offset, $perPage);
+            ", ['courseid' => $courseid], $offset, $perpage);
 
             foreach ($gradeitems as $item) {
                 $modname = $item->itemmodule;
@@ -616,18 +643,18 @@ class mad_dashboard extends external_api {
 
                 $context = \context_module::instance($cm->id);
 
-                $perPageItemPage = 25;
-                $countItemPage = $DB->count_records('grade_grades', ['itemid' => $item->id]);
-                $endItemPage = (int)ceil($countItemPage / $perPageItemPage);
+                $perpageitems = 25;
+                $countitempage = $DB->count_records('grade_grades', ['itemid' => $item->id]);
+                $enditempage = (int)ceil($countitempage / $perpageitems);
 
-                for ($currentItemPage = 1; $currentItemPage <= $endItemPage; $currentItemPage++) {
-                    $offsetItemPage = ($currentItemPage - 1) * $perPageItemPage;
+                for ($currentitempage = 1; $currentitempage <= $enditempage; $currentitempage++) {
+                    $offsetitempage = ($currentitempage - 1) * $perpageitems;
 
                     $grades = $DB->get_records_sql("
                         SELECT *
                           FROM {grade_grades}
                          WHERE itemid = :itemid
-                    ", ['itemid' => $item->id], $offsetItemPage, $perPageItemPage);
+                    ", ['itemid' => $item->id], $offsetitempage, $perpageitems);
 
                     foreach ($grades as $grade) {
                         $data = [
@@ -660,71 +687,74 @@ class mad_dashboard extends external_api {
 
     /**
      * Sends the original course logs to the external API in batches.
-     * @param int $courseId The ID of the course.
+     * @param int $courseid The ID of the course.
      * @return void
     */
-    public static function send_original_course_logs($courseId) {
+    public static function send_original_course_logs($courseid) {
         global $DB, $USER;
 
-        $courseId = (int)$courseId;
+        $courseid = (int)$courseid;
 
-        echo("Sending original course logs for {$courseId}\n");
+        echo("Sending original course logs for {$courseid}\n");
 
         $count = $DB->count_records_sql("
             SELECT COUNT(DISTINCT cm.id)
               FROM {course_modules} cm
               JOIN {modules} m ON cm.module = m.id
              WHERE cm.course = :courseid
-        ", ['courseid' => $courseId]);
+        ", ['courseid' => $courseid]);
 
-        $perPage = 25;
-        $endPage = (int)ceil($count / $perPage);
+        $perpage = 25;
+        $endpage = (int)ceil($count / $perpage);
 
-        echo("Sending {$count} activities for course {$courseId} in {$endPage} pages\n");
+        echo("Sending {$count} activities for course {$courseid} in {$endpage} pages\n");
 
-        for ($currentPage = 1; $currentPage <= $endPage; $currentPage++) {
-            $offset = ($currentPage - 1) * $perPage;
+        for ($currentpage = 1; $currentpage <= $endpage; $currentpage++) {
+            $offset = ($currentpage - 1) * $perpage;
             $logs = [];
 
-            echo("Sending page {$currentPage} for course {$courseId} \n");
+            echo("Sending page {$currentpage} for course {$courseid} \n");
 
-            $courseModules = $DB->get_records_sql("
-                SELECT cm.id AS course_module_id,
-                       m.name AS module_type,
+            $coursemodules = $DB->get_records_sql("
+                SELECT cm.id AS coursemoduleid,
+                       m.name AS moduletype,
                        cm.instance,
                        cm.section,
                        cm.visible
                   FROM {course_modules} cm
                   JOIN {modules} m ON cm.module = m.id
                  WHERE cm.course = :courseid
-            ", ['courseid' => $courseId], $offset, $perPage);
+            ", ['courseid' => $courseid], $offset, $perpage);
 
-            if (empty($courseModules)) {
-                echo("No course modules found for course {$courseId} \n");
+            if (empty($coursemodules)) {
+                echo("No course modules found for course {$courseid} \n");
+
                 continue;
             }
 
-            echo("Found " . count($courseModules) . " course modules for course {$courseId} \n");
+            echo("Found " . count($coursemodules) . " course modules for course {$courseid} \n");
 
-            foreach ($courseModules as $courseModule) {
-                $tableName = $courseModule->module_type;
-                $instanceId = (int)$courseModule->instance;
+            foreach ($coursemodules as $coursemodule) {
+                $tablename = $coursemodule->moduletype;
+                $instanceid = (int)$coursemodule->instance;
 
-                $instance = $DB->get_record($tableName, ['id' => $instanceId]);
+                $instance = $DB->get_record($tablename, ['id' => $instanceid]);
 
                 if (empty($instance) || !isset($instance->name)) {
-                    echo("Instance not found for table {$tableName} with ID {$instanceId}\n");
+                    echo("Instance not found for table {$tablename} with ID {$instanceid}\n");
+
                     continue;
                 }
 
-                $context = \context_module::instance($courseModule->course_module_id, IGNORE_MISSING);
+                $context = \context_module::instance($coursemodule->coursemoduleid, IGNORE_MISSING);
 
                 if (empty($context) || !isset($context->instanceid)) {
-                    echo("Context not found for activity #{$courseModule->course_module_id} \n");
+                    echo("Context not found for activity #{$coursemodule->coursemoduleid} \n");
+
                     continue;
                 }
 
-                $cm = get_coursemodule_from_id(false, $courseModule->course_module_id, 0, false, MUST_EXIST);
+                $cm = get_coursemodule_from_id(false, $coursemodule->coursemoduleid, 0, false, MUST_EXIST);
                 $modname = $cm->modname;
 
                 $tm = $DB->get_manager();
@@ -734,7 +764,7 @@ class mad_dashboard extends external_api {
                 }
 
                 $grades = grade_get_grades($cm->course, 'mod', $cm->modname, $cm->instance);
-                $activityUrl = new \moodle_url("/mod/{$cm->modname}/view.php", ['id' => $cm->id]);
+                $activityurl = new \moodle_url("/mod/{$cm->modname}/view.php", ['id' => $cm->id]);
 
                 $logs[$context->id] = [
                     'id'                => 0,
@@ -742,15 +772,15 @@ class mad_dashboard extends external_api {
                     'other'             => json_encode([
                         'name'       => $instance->name,
                         'instanceid' => $context->instanceid,
-                        'modulename' => $tableName,
-                        'visible'    => $courseModule->visible,
+                        'modulename' => $tablename,
+                        'visible'    => $coursemodule->visible,
                         'gradable'   => !empty($grades->items),
                         'duedate'    => self::get_activity_duedate($cm),
-                        'url'        => $activityUrl->out()
+                        'url'        => $activityurl->out()
                     ]),
                     'action'            => 'created',
                     'target'            => 'course_module',
-                    'courseid'          => $courseId,
+                    'courseid'          => $courseid,
                     'userid'            => $USER->id,
                     'objectid'          => $context->instanceid,
                     'anonymous'         => 0,
@@ -763,13 +793,13 @@ class mad_dashboard extends external_api {
                     'timecreated'       => $instance->timemodified ?? time()
                 ];
 
-                echo("Sending activity {$instance->name} | {$instanceId} | visible? {$courseModule->visible} \n");
+                echo("Sending activity {$instance->name} | {$instanceid} | visible? {$coursemodule->visible} \n");
             }
 
             $data = ['logs' => $logs];
 
             try {
-                self::do_post_request("api/v2/courses/{$courseId}/logs/batch", $data, $courseId);
+                self::do_post_request("api/v2/courses/{$courseid}/logs/batch", $data, $courseid);
             } catch (\Exception $e) {
                 echo("Error sending logs: " . $e->getMessage() . "\n");
             }
@@ -793,22 +823,22 @@ class mad_dashboard extends external_api {
         $instanceid = (int)$cm->instance;
 
         $duedatefields = [
-            'assign'        => 'duedate',
-            'quiz'          => 'timeclose',
-            'lesson'        => 'deadline',
-            'workshop'      => 'submissionend',
-            'chat'          => 'chattime',
-            'data'          => 'timeavailableto',
-            'feedback'      => 'timeclose',
-            'forum'         => 'duedate',
-            'glossary'      => 'assesseduntil',
-            'scorm'         => 'timeclose',
-            'survey'        => null,
-            'wiki'          => null,
-            'h5pactivity'   => 'timeclose',
-            'choice'        => 'timeclose',
-            'database'      => 'timeavailableto',
-            'assignoverride'=> 'duedate',
+            'assign'         => 'duedate',
+            'quiz'           => 'timeclose',
+            'lesson'         => 'deadline',
+            'workshop'       => 'submissionend',
+            'chat'           => 'chattime',
+            'data'           => 'timeavailableto',
+            'feedback'       => 'timeclose',
+            'forum'          => 'duedate',
+            'glossary'       => 'assesseduntil',
+            'scorm'          => 'timeclose',
+            'survey'         => null,
+            'wiki'           => null,
+            'h5pactivity'    => 'timeclose',
+            'choice'         => 'timeclose',
+            'database'       => 'timeavailableto',
+            'assignoverride' => 'duedate',
         ];
 
         if (empty($duedatefields[$modname])) {
@@ -824,21 +854,21 @@ class mad_dashboard extends external_api {
     /**
      * Requests an authorization URL from the external API for the dashboard.
      *
-     * @param int $courseId The ID of the course.
+     * @param int $courseid The ID of the course.
      * @return object An object containing the authorization URL or an empty object on failure.
      * @throws \moodle_exception If there is an error during the process.
     */
-    public static function api_dashboard_auth_url($courseId) {
+    public static function api_dashboard_auth_url($courseid) {
         global $USER;
 
-        $courseId = (int)$courseId;
+        $courseid = (int)$courseid;
         $auth = [
             'teacherId' => $USER->id,
-            'moodleId'  => $courseId,
+            'moodleId'  => $courseid,
             'email'     => $USER->email
         ];
 
-        $resp = self::do_post_request('api/v2/authorize', $auth, $courseId);
+        $resp = self::do_post_request('api/v2/authorize', $auth, $courseid);
 
         return $resp->data ?? (object)[];
     }
@@ -846,28 +876,28 @@ class mad_dashboard extends external_api {
     /**
      * Checks if a user is enrolled in any monitored courses.
      *
-     * @param int $userId The ID of the user to check.
+     * @param int $userid The ID of the user to check.
      * @return object|null The course record if the user is enrolled in a monitored course, null otherwise.
     */
-    public static function enrolled_monitored_courses($userId) {
+    public static function enrolled_monitored_courses($userid) {
         global $DB;
 
-        $userId = (int)$userId;
+        $userid = (int)$userid;
 
-        $monitoredCourses = $DB->get_records('mad2api_dashboard_settings', ['is_enabled' => 1]);
+        $monitoredcourses = $DB->get_records('block_mad2api_dashboard_settings', ['isenabled' => 1]);
 
-        foreach ($monitoredCourses as $monitoredCourse) {
-            $courseIdRow = $DB->get_record_sql("
+        foreach ($monitoredcourses as $monitoredcourse) {
+            $courseidrow = $DB->get_record_sql("
                 SELECT c.id
                   FROM {course} c
                   JOIN {context} ct ON c.id = ct.instanceid
                   JOIN {role_assignments} ra ON ra.contextid = ct.id
                   JOIN {user} u ON u.id = ra.userid
                  WHERE c.id = :courseid AND u.id = :userid
-            ", ['courseid' => (int)$monitoredCourse->course_id, 'userid' => $userId]);
+            ", ['courseid' => (int)$monitoredcourse->courseid, 'userid' => $userid]);
 
-            if (!empty($courseIdRow)) {
-                return $courseIdRow;
+            if (!empty($courseidrow)) {
+                return $courseidrow;
             }
         }
 
@@ -876,14 +906,14 @@ class mad_dashboard extends external_api {
 
     /**
      * Gets the total number of students enrolled in a course.
-     * @param int $courseId The ID of the course.
+     * @param int $courseid The ID of the course.
      * @return int The total number of students enrolled in the course.
      */
-    public static function get_course_students_count($courseId) {
+    public static function get_course_students_count($courseid) {
         global $DB;
 
-        $courseId   = (int)$courseId;
-        $studentRole= (int)get_config('mad2api', 'studentRole');
+        $courseid    = (int)$courseid;
+        $studentrole = (int)get_config('block_mad2api', 'studentrole');
 
         return $DB->count_records_sql("
             SELECT COUNT(*)
@@ -893,24 +923,24 @@ class mad_dashboard extends external_api {
               JOIN {user} u ON u.id = ra.userid
               JOIN {role} r ON r.id = ra.roleid
              WHERE c.id = :courseid AND r.id = :roleid
-        ", ['courseid' => $courseId, 'roleid' => $studentRole]);
+        ", ['courseid' => $courseid, 'roleid' => $studentrole]);
     }
 
     /**
      * Retrieves a paginated list of students enrolled in a course along with their details.
      *
-     * @param int $courseId The ID of the course.
-     * @param int $perPage The number of students to retrieve per page.
+     * @param int $courseid The ID of the course.
+     * @param int $perpage The number of students to retrieve per page.
      * @param int $offset The offset for pagination.
      * @return array An array of student records with their details.
     */
-    public static function get_course_students($courseId, $perPage, $offset) {
+    public static function get_course_students($courseid, $perpage, $offset) {
         global $DB;
 
-        $courseId    = (int)$courseId;
-        $perPage     = (int)$perPage;
+        $courseid    = (int)$courseid;
+        $perpage     = (int)$perpage;
         $offset      = (int)$offset;
-        $studentRole = (int)get_config('mad2api', 'studentRole');
+        $studentrole = (int)get_config('block_mad2api', 'studentrole');
 
         $sql = "
             SELECT u.id AS user_id, u.email,
@@ -931,12 +961,12 @@ class mad_dashboard extends external_api {
         ";
 
         $params = [
-            'courseid_gi' => $courseId,
-            'courseid'    => $courseId,
-            'roleid'      => $studentRole
+            'courseid_gi' => $courseid,
+            'courseid'    => $courseid,
+            'roleid'      => $studentrole
         ];
 
-        $students = $DB->get_records_sql($sql, $params, $offset, $perPage);
+        $students = $DB->get_records_sql($sql, $params, $offset, $perpage);
 
         return self::camelizeArray($students);
     }
@@ -944,16 +974,16 @@ class mad_dashboard extends external_api {
     /**
      * Retrieves details of a specific student enrolled in a course.
      *
-     * @param int $courseId The ID of the course.
-     * @param int $studentId The ID of the student.
+     * @param int $courseid The ID of the course.
+     * @param int $studentid The ID of the student.
      * @return object|null An object containing the student's details or null if not found.
     */
-    public static function get_course_student($courseId, $studentId) {
+    public static function get_course_student($courseid, $studentid) {
         global $DB;
 
-        $courseId    = (int)$courseId;
-        $studentId   = (int)$studentId;
-        $studentRole = (int)get_config('mad2api', 'studentRole');
+        $courseid    = (int)$courseid;
+        $studentid   = (int)$studentid;
+        $studentrole = (int)get_config('block_mad2api', 'studentrole');
 
         $sql = "
             SELECT u.id AS user_id, u.email,
@@ -972,10 +1002,10 @@ class mad_dashboard extends external_api {
         ";
 
         $params = [
-            'courseid_gi' => $courseId,
-            'courseid'    => $courseId,
-            'roleid'      => $studentRole,
-            'userid'      => $studentId,
+            'courseid_gi' => $courseid,
+            'courseid'    => $courseid,
+            'roleid'      => $studentrole,
+            'userid'      => $studentid,
         ];
 
         $student = $DB->get_record_sql($sql, $params);
@@ -986,20 +1016,20 @@ class mad_dashboard extends external_api {
     /**
      * Retrieves details of a specific user in the context of a course, including their role.
      *
-     * @param int $userId The ID of the user.
-     * @param int $courseId The ID of the course.
+     * @param int $userid The ID of the user.
+     * @param int $courseid The ID of the course.
      * @return object|null An object containing the user's details and role or null if not found.
     */
-    public static function get_user($userId, $courseId) {
+    public static function get_user($userid, $courseid) {
         global $DB;
 
-        $userId     = (int)$userId;
-        $courseId   = (int)$courseId;
-        $studentRole = (int)get_config('mad2api', 'studentRole');
+        $userid      = (int)$userid;
+        $courseid    = (int)$courseid;
+        $studentrole = (int)get_config('block_mad2api', 'studentrole');
 
-        $coordinatorRolesCfg = (string)get_config('mad2api', 'admin_roles');
-        $coordinatorRoles = self::parse_role_ids_list($coordinatorRolesCfg);
-        list($inSql, $inParams) = $DB->get_in_or_equal($coordinatorRoles, SQL_PARAMS_NAMED, 'cr');
+        $coordinatorrolescfg = (string)get_config('block_mad2api', 'adminroles');
+        $coordinatorroles = self::parse_role_ids_list($coordinatorrolescfg);
+        list($insql, $inparams) = $DB->get_in_or_equal($coordinatorroles, SQL_PARAMS_NAMED, 'cr');
 
         $sql = "
             SELECT u.id AS user_id, u.email,
@@ -1009,7 +1039,7 @@ class mad_dashboard extends external_api {
                    r.shortname AS moodle_role,
                    (CASE
                         WHEN r.id = :studentrole THEN 'student'
-                        WHEN r.id {$inSql} THEN 'coordinator'
+                        WHEN r.id {$insql} THEN 'coordinator'
                         ELSE 'teacher'
                     END) AS role
               FROM {course} c
@@ -1024,11 +1054,11 @@ class mad_dashboard extends external_api {
         ";
 
         $params = array_merge([
-            'studentrole' => $studentRole,
-            'courseid_gi' => $courseId,
-            'courseid'    => $courseId,
-            'userid'      => $userId,
-        ], $inParams);
+            'studentrole' => $studentrole,
+            'courseid_gi' => $courseid,
+            'courseid'    => $courseid,
+            'userid'      => $userid,
+        ], $inparams);
 
         $user = $DB->get_record_sql($sql, $params);
 
@@ -1037,19 +1067,19 @@ class mad_dashboard extends external_api {
 
     /**
      * Retrieves a list of teachers assigned to a specific course.
-     * @param int $courseId The ID of the course.
+     * @param int $courseid The ID of the course.
      * @return array An array of teacher records with their details.
     */
-    public static function get_course_teachers($courseId) {
+    public static function get_course_teachers($courseid) {
         global $DB;
 
-        $courseId = (int)$courseId;
+        $courseid = (int)$courseid;
 
-        $rolesCfg = (string)get_config('mad2api', 'roles');
-        $roleIds  = self::parse_role_ids_list($rolesCfg);
-        if (empty($roleIds)) { return []; }
+        $rolescfg = (string)get_config('block_mad2api', 'roles');
+        $rolesid  = self::parse_role_ids_list($rolescfg);
+        if (empty($rolesid)) { return []; }
 
-        list($inSql, $inParams) = $DB->get_in_or_equal($roleIds, SQL_PARAMS_NAMED, 'tr');
+        list($insql, $inparams) = $DB->get_in_or_equal($rolesid, SQL_PARAMS_NAMED, 'tr');
 
         $sql = "
             SELECT u.id AS user_id, u.email,
@@ -1060,29 +1090,29 @@ class mad_dashboard extends external_api {
               JOIN {role_assignments} ra ON ra.contextid = ct.id
               JOIN {user} u ON u.id = ra.userid
               JOIN {role} r ON r.id = ra.roleid
-             WHERE c.id = :courseid AND r.id {$inSql}
+             WHERE c.id = :courseid AND r.id {$insql}
         ";
 
-        $params = array_merge(['courseid' => $courseId], $inParams);
+        $params = array_merge(['courseid' => $courseid], $inparams);
 
         return array_values($DB->get_records_sql($sql, $params));
     }
 
     /**
      * Retrieves a list of coordinators assigned to a specific course.
-     * @param int $courseId The ID of the course.
+     * @param int $courseid The ID of the course.
      * @return array An array of coordinator records with their details.
     */
-    public static function get_course_coordinators($courseId) {
+    public static function get_course_coordinators($courseid) {
         global $DB;
 
-        $courseId = (int)$courseId;
+        $courseid = (int)$courseid;
 
-        $rolesCfg = (string)get_config('mad2api', 'admin_roles');
-        $roleIds  = self::parse_role_ids_list($rolesCfg);
-        if (empty($roleIds)) { return []; }
+        $rolescfg = (string)get_config('block_mad2api', 'admin_roles');
+        $rolesid  = self::parse_role_ids_list($rolescfg);
+        if (empty($rolesid)) { return []; }
 
-        list($inSql, $inParams) = $DB->get_in_or_equal($roleIds, SQL_PARAMS_NAMED, 'cr');
+        list($insql, $inparams) = $DB->get_in_or_equal($rolesid, SQL_PARAMS_NAMED, 'cr');
 
         $sql = "
             SELECT u.id AS user_id, u.email,
@@ -1093,10 +1123,10 @@ class mad_dashboard extends external_api {
               JOIN {role_assignments} ra ON ra.contextid = ct.id
               JOIN {user} u ON u.id = ra.userid
               JOIN {role} r ON r.id = ra.roleid
-             WHERE c.id = :courseid AND r.id {$inSql}
+             WHERE c.id = :courseid AND r.id {$insql}
         ";
 
-        $params = array_merge(['courseid' => $courseId], $inParams);
+        $params = array_merge(['courseid' => $courseid], $inparams);
 
         return array_values($DB->get_records_sql($sql, $params));
     }
@@ -1107,17 +1137,17 @@ class mad_dashboard extends external_api {
      * @return array The new associative array with camelCase keys.
     */
     public static function camelizeObject($obj) {
-        $new_obj = [];
+        $newobj = [];
 
         if (gettype($obj) === 'boolean' || $obj === null) {
-            return $new_obj;
+            return $newobj;
         }
 
         foreach ($obj as $key => $value) {
-            $new_obj[self::convertToCamel($key, '_')] = $value;
+            $newobj[self::convertToCamel($key, '_')] = $value;
         }
 
-        return $new_obj;
+        return $newobj;
     }
 
     /**
@@ -1126,13 +1156,13 @@ class mad_dashboard extends external_api {
      * @return array The new array with camelCase keys.
     */
     public static function camelizeArray($array) {
-        $formattedArray = [];
+        $formattedarray = [];
 
         foreach ($array as $item) {
-            $formattedArray[] = self::camelizeObject($item);
+            $formattedarray[] = self::camelizeObject($item);
         }
 
-        return $formattedArray;
+        return $formattedarray;
     }
 
     /**
@@ -1149,26 +1179,26 @@ class mad_dashboard extends external_api {
     /**
      * Disables a course in the local database if the external API returns a 400 or 404 status code.
      * @param resource $ch The cURL handle.
-     * @param int $courseId The ID of the course to potentially disable.
+     * @param int $courseid The ID of the course to potentially disable.
      * @return void
     */
-    private static function disable_course_if_not_found($ch, $courseId) {
+    private static function disable_course_if_not_found($ch, $courseid) {
         global $DB;
 
-        $http_status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $httpstatus = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
-        if (in_array((int)$http_status, [400, 404], true)) {
+        if (in_array((int)$httpstatus, [400, 404], true)) {
             $resources = $DB->get_records(
-                'mad2api_dashboard_settings', ['course_id' => (int)$courseId, 'is_enabled' => 1]
+                'block_mad2api_dashboard_settings', ['courseid' => (int)$courseid, 'isenabled' => 1]
             );
 
             foreach ($resources as $resource) {
                 $data = [
                     'id'         => $resource->id,
-                    'is_enabled' => 0
+                    'isenabled'  => 0
                 ];
 
-                $DB->update_record('mad2api_dashboard_settings', $data, false);
+                $DB->update_record('block_mad2api_dashboard_settings', $data, false);
             }
         }
     }
@@ -1186,12 +1216,12 @@ class mad_dashboard extends external_api {
         return lcfirst(implode('', $parts));
     }
 
-    public static function is_course_enabled($courseId) {
+    public static function is_course_enabled($courseid) {
         global $DB;
 
-        return (bool)$DB->get_record('mad2api_dashboard_settings', [
-            'course_id'  => (int)$courseId,
-            'is_enabled' => 1
+        return (bool)$DB->get_record('block_mad2api_dashboard_settings', [
+            'courseid'  => (int)$courseid,
+            'isenabled' => 1
         ]);
     }
 
@@ -1199,11 +1229,11 @@ class mad_dashboard extends external_api {
      * Sends a POST request to the specified URL with the given body and handles course disabling if necessary.
      * @param string $url The endpoint URL (relative to the base API URL).
      * @param array|object $body The data to send in the POST request.
-     * @param int|null $courseId The ID of the course (optional, used for disabling if not found).
+     * @param int|null $courseid The ID of the course (optional, used for disabling if not found).
      * @return object|null The response data from the API or null on failure.
     */
-    public static function do_post_request($url, $body, $courseId = null) {
-        $apiKey = get_config('mad2api', 'api_key');
+    public static function do_post_request($url, $body, $courseid = null) {
+        $apikey = get_config('block_mad2api', 'apikey');
         $ch = curl_init();
 
         curl_setopt($ch, CURLOPT_URL, self::get_url_for($url));
@@ -1214,14 +1244,15 @@ class mad_dashboard extends external_api {
         $headers = [
             'accept: application/json',
             'Content-Type: application/json',
-            "API-KEY: {$apiKey}"
+            "API-KEY: {$apikey}"
         ];
+
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
         $response = curl_exec($ch);
 
-        if ($courseId !== null) {
-            self::disable_course_if_not_found($ch, (int)$courseId);
+        if ($courseid !== null) {
+            self::disable_course_if_not_found($ch, (int)$courseid);
         }
 
         curl_close($ch);
@@ -1236,7 +1267,7 @@ class mad_dashboard extends external_api {
      * @return object|null The response data from the API or null on failure.
     */
     private static function do_put_request($url, $body) {
-        $apiKey = get_config('mad2api', 'api_key');
+        $apikey = get_config('block_mad2api', 'apikey');
         $ch = curl_init();
 
         curl_setopt($ch, CURLOPT_URL, self::get_url_for($url));
@@ -1248,11 +1279,13 @@ class mad_dashboard extends external_api {
         $headers = [
             'accept: application/json',
             'Content-Type: application/json',
-            "API-KEY: {$apiKey}"
+            "API-KEY: {$apikey}"
         ];
+
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
         $response = curl_exec($ch);
+
         curl_close($ch);
 
         return json_decode($response ?? '');
@@ -1264,7 +1297,7 @@ class mad_dashboard extends external_api {
      * @return object|null The response data from the API or null on failure.
     */
     private static function do_get_request($url) {
-        $apiKey = get_config('mad2api', 'api_key');
+        $apikey = get_config('block_mad2api', 'apikey');
         $ch = curl_init();
 
         curl_setopt($ch, CURLOPT_URL, self::get_url_for($url));
@@ -1273,11 +1306,13 @@ class mad_dashboard extends external_api {
         $headers = [
             'accept: application/json',
             'Content-Type: application/json',
-            "API-KEY: {$apiKey}"
+            "API-KEY: {$apikey}"
         ];
+
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
         $response = curl_exec($ch);
+
         curl_close($ch);
 
         return json_decode($response ?? '');
@@ -1289,9 +1324,9 @@ class mad_dashboard extends external_api {
      * @return string The full URL for the API endpoint.
     */
     private static function get_url_for($path) {
-        $apiUrl = rtrim((string)get_config('mad2api', 'api_url'), '/');
+        $apiurl = rtrim((string)get_config('block_mad2api', 'apiurl'), '/');
         $path   = ltrim($path, '/');
 
-        return "{$apiUrl}/{$path}";
+        return "{$apiurl}/{$path}";
     }
 }

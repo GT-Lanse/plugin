@@ -1,5 +1,5 @@
 {
-  "name": "puglin",
+  "name": "moodle-block_mad2api",
   "devDependencies": {
     "grunt": "^1.6.1",
     "grunt-contrib-uglify": "^5.2.2",

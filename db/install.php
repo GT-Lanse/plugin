@@ -1,4 +1,27 @@
 <?php
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+/**
+ * Installation functions for mad2api block.
+ *
+ * @package   block_mad2api
+ * @copyright 2025
+ * @license   https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 defined('MOODLE_INTERNAL') || die();
 
 function xmldb_block_mad2api_install()
@@ -6,10 +29,10 @@ function xmldb_block_mad2api_install()
   global $DB;
 
   $params = array(
-    'created_at' => date('Y-m-d H:i:s'),
-    'updated_at' => date('Y-m-d H:i:s'),
-    'sent_at' => date('Y-m-d H:i:s')
+    'createdat' => date('Y-m-d H:i:s'),
+    'updatedat' => date('Y-m-d H:i:s'),
+    'sentat' => date('Y-m-d H:i:s')
   );
 
-  $DB->insert_record('mad2api_api_settings', $params, false);
+  $DB->insert_record('block_mad2api_api_settings', $params, false);
 }
