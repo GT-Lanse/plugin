@@ -38,23 +38,23 @@ $settings->add(new admin_setting_heading('sampleheader',
                                          get_string('descconfig', 'block_mad2api')));
 
 $settings->add(new admin_setting_configtext('block_mad2api/organization',
-                                               'Nome da organização',
+                                               get_string('organization', 'block_mad2api'),
                                                '',
                                                'UFSC'));
 
 $settings->add(new admin_setting_configtext('block_mad2api/apiurl',
-                                               'URL da API',
+                                               get_string('apiurl', 'block_mad2api'),
                                                '',
                                                'https://lanse.sites.ufsc.br/api'));
 
 $settings->add(new admin_setting_configtext('block_mad2api/appurl',
-                                               'URL da plataforma',
+                                               get_string('appurl', 'block_mad2api'),
                                                '',
                                                'https://lanse.sites.ufsc.br'));
 
 $apikey = new admin_setting_configtext(
   'block_mad2api/apikey',
-  'Chave API KEY Plugin',
+  get_string('apikey', 'block_mad2api'),
   '',
   null
 );
@@ -71,24 +71,24 @@ $settings->add($apikey);
 
 $settings->add(new admin_setting_configmultiselect(
   'block_mad2api/adminroles',
-  'Perfil Coordenador na LANSE',
-  'Perfis que terão acesso ao Plugin como coordenador',
+  get_string('adminroles', 'block_mad2api'),
+  get_string('adminroles_desc', 'block_mad2api'),
   array(1),
   $options
 ));
 
 $settings->add(new admin_setting_configmultiselect(
   'block_mad2api/roles',
-  'Perfil Professor/Tutor na LANSE',
-  'Perfis que terão acesso ao Plugin como professor/tutor',
+  get_string('roles', 'block_mad2api'),
+  get_string('roles_desc', 'block_mad2api'),
   array(4, 3),
   $options
 ));
 
 $settings->add(new admin_setting_configselect(
   'block_mad2api/studentrole',
-  'Selecione o papel de estudante na LANSE',
-  'Perfil utilizado para identificar os estudantes no Plugin',
+  get_string('studentrole', 'block_mad2api'),
+  get_string('studentrole_desc', 'block_mad2api'),
   5,
   $options
 ));

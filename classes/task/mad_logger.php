@@ -35,7 +35,7 @@ class mad_logger extends \core\task\scheduled_task {
    * @return string
    */
   public function get_name() {
-    return 'LANSE Send Logs';
+    return get_string('send_logs_task_name', 'block_mad2api');
   }
 
   /**

@@ -142,6 +142,106 @@ function xmldb_block_mad2api_upgrade($oldversion)
     }
   }
 
+  if ($oldversion < 2025112300) {
+    $oldtable = new xmldb_table('mad2api_dashboard_settings');
+
+    if ($dbman->table_exists($oldtable)) {
+      $dbman->rename_table($oldtable, 'block_mad2api_dashboard_settings');
+    }
+
+    $table = new xmldb_table('block_mad2api_dashboard_settings');
+
+    $field = new xmldb_field('created_at', XMLDB_TYPE_CHAR, '50', null, XMLDB_NOTNULL, null, null);
+
+    if ($dbman->field_exists($table, $field)) {
+      $dbman->rename_field($table, $field, 'createdat');
+    }
+
+    $field = new xmldb_field('updated_at', XMLDB_TYPE_CHAR, '50', null, XMLDB_NOTNULL, null, null);
+
+    if ($dbman->field_exists($table, $field)) {
+      $dbman->rename_field($table, $field, 'updatedat');
+    }
+
+    $field = new xmldb_field('course_id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+
+    if ($dbman->field_exists($table, $field)) {
+        $dbman->rename_field($table, $field, 'courseid');
+    }
+
+    $field = new xmldb_field('is_enabled', XMLDB_TYPE_INTEGER, '2', null, null, null, null);
+
+    if ($dbman->field_exists($table, $field)) {
+      $dbman->rename_field($table, $field, 'isenabled');
+    }
+    $oldtable = new xmldb_table('mad2api_api_settings');
+
+    if ($dbman->table_exists($oldtable)) {
+      $dbman->rename_table($oldtable, 'block_mad2api_api_settings');
+    }
+
+    $table = new xmldb_table('block_mad2api_api_settings');
+
+    $field = new xmldb_field('sent_at', XMLDB_TYPE_CHAR, '50', null, null, null, null);
+
+    if ($dbman->field_exists($table, $field)) {
+      $dbman->rename_field($table, $field, 'sentat');
+    }
+
+    $field = new xmldb_field('created_at', XMLDB_TYPE_CHAR, '50', null, XMLDB_NOTNULL, null, null);
+
+    if ($dbman->field_exists($table, $field)) {
+      $dbman->rename_field($table, $field, 'createdat');
+    }
+
+    $field = new xmldb_field('updated_at', XMLDB_TYPE_CHAR, '50', null, XMLDB_NOTNULL, null, null);
+
+    if ($dbman->field_exists($table, $field)) {
+      $dbman->rename_field($table, $field, 'updatedat');
+    }
+
+    $oldtable = new xmldb_table('mad2api_course_logs');
+
+    if ($dbman->table_exists($oldtable)) {
+      $dbman->rename_table($oldtable, 'block_mad2api_course_logs');
+    }
+
+    $table = new xmldb_table('block_mad2api_course_logs');
+
+    $field = new xmldb_field('created_at', XMLDB_TYPE_CHAR, '50', null, XMLDB_NOTNULL, null, null);
+
+    if ($dbman->field_exists($table, $field)) {
+      $dbman->rename_field($table, $field, 'createdat');
+    }
+
+    $field = new xmldb_field('updated_at', XMLDB_TYPE_CHAR, '50', null, XMLDB_NOTNULL, null, null);
+
+    if ($dbman->field_exists($table, $field)) {
+      $dbman->rename_field($table, $field, 'updatedat');
+    }
+
+    $field = new xmldb_field('course_id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+
+    if ($dbman->field_exists($table, $field)) {
+      $dbman->rename_field($table, $field, 'courseid');
+    }
+
+    $field = new xmldb_field('students_sent', XMLDB_TYPE_INTEGER, '1', null, null, null, '0');
+
+    if ($dbman->field_exists($table, $field)) {
+      $dbman->rename_field($table, $field, 'studentssent');
+    }
+
+    $field = new xmldb_field('last_log_page', XMLDB_TYPE_INTEGER, '10', null, null, null, '1');
+
+    if ($dbman->field_exists($table, $field)) {
+      $dbman->rename_field($table, $field, 'lastlogpage');
+    }
+
+    // Savepoint
+    upgrade_block_savepoint(true, 2025112300, 'mad2api');
+  }
+
   if (!!$DB->get_record("block_mad2api_api_settings", array())) {
     return true;
   }

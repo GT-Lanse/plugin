@@ -28,7 +28,7 @@ defined('MOODLE_INTERNAL') || die();
 
 class mad_check_resend_data extends \core\task\scheduled_task {
   public function get_name() {
-    return 'LANSE Check Data To Be Resend';
+    return get_string('check_resend_data_task_name', 'block_mad2api');
   }
 
   public function execute() {

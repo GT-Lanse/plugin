@@ -92,6 +92,7 @@ class mad_dashboard extends external_api {
             if (empty($response) || !is_object($response) || !property_exists($response, 'url')) {
                 return [['enabled' => false, 'url' => '', 'error' => true]];
             }
+
             return [['enabled' => true, 'url' => $response->url, 'error' => false]];
         }
 
@@ -199,12 +200,12 @@ class mad_dashboard extends external_api {
         $response = self::api_check_pending_activities();
 
         if (empty($response->data)) {
-            echo("No pending activities found \n");
+            mtrace("No pending activities found \n");
 
             return;
         }
 
-        echo("Found " . count($response->data) . " pending activities \n");
+        mtrace("Found " . count($response->data) . " pending activities \n");
 
         foreach ($response->data as $activity) {
             if (empty($activity->contextInstanceId)) {
@@ -214,24 +215,24 @@ class mad_dashboard extends external_api {
             $coursemodule = $DB->get_record('course_modules', ['id' => (int)$activity->contextInstanceId]);
 
             if (empty($coursemodule) || empty($coursemodule->instance)) {
-                echo("Course module not found for activity #{$activity->contextInstanceId} \n");
+                mtrace("Course module not found for activity #{$activity->contextInstanceId} \n");
 
                 continue;
             }
 
             $tablename = strtolower($activity->type);
 
-            echo("Searching on table {{$tablename}} for activity #{$coursemodule->instance} \n");
+            mtrace("Searching on table {{$tablename}} for activity #{$coursemodule->instance} \n");
 
             $instance = $DB->get_record($tablename, ['id' => (int)$coursemodule->instance]);
 
             if (empty($instance)) {
-                echo("Instance not found for activity #{$activity->contextInstanceId} \n");
+                mtrace("Instance not found for activity #{$activity->contextInstanceId} \n");
 
                 continue;
             }
 
-            echo("Sending activity name {$instance->name} for {$activity->name}\n");
+            mtrace("Sending activity name {$instance->name} for {$activity->name}\n");
 
             self::send_activity_name((int)$activity->moodleId, (int)$activity->contextId, $instance->name);
         }
@@ -261,7 +262,7 @@ class mad_dashboard extends external_api {
         $courselog = !empty($lastlogs) ? $lastlogs[0] : null;
 
         if (!$courselog) {
-            echo("Course log not found for course #{$courseid} \n");
+            mtrace("Course log not found for course #{$courseid} \n");
 
             return;
         }
@@ -269,7 +270,7 @@ class mad_dashboard extends external_api {
         $response = self::api_check_course_data((int)$courseid);
 
         if ($response && !empty($response->resend_data)) {
-            echo("Resend data enabled for course #{$courseid} \n");
+            mtrace("Resend data enabled for course #{$courseid} \n");
 
             self::api_enable_call((int)$courseid);
 
@@ -402,11 +403,11 @@ class mad_dashboard extends external_api {
 
         $enable = [
             'course' => [
-                'startDate' => $course->startdate,
-                'endDate'   => $course->enddate,
-                'name'      => $course->fullname,
-                'shortName' => $course->shortname,
-                'url'       => $courseurl->out(),
+                'startDate' => (int)($course->startdate ?? 0),
+                'endDate'   => (int)($course->enddate   ?? 0),
+                'name'      => $course->fullname  ?? '',
+                'shortName' => $course->shortname ?? '',
+                'url'       => $courseurl->out()
             ],
             'teachers'      => self::get_course_teachers($courseid),
             'coordinators'  => self::get_course_coordinators($courseid),
@@ -493,47 +494,44 @@ class mad_dashboard extends external_api {
      * @return void
     */
     public static function api_send_logs($courseid) {
-        global $DB;
+        global $DB, $USER;
 
         $courseid = (int)$courseid;
 
-        $courselog = $DB->get_record('block_mad2api_course_logs', ['courseid' => $courseid, 'status' => 'done']);
+        $courselog = $DB->get_record('block_mad2api_course_logs', [
+            'courseid' => $courseid,
+            'status'   => 'done'
+        ]);
 
-        if ($courselog) { return; }
+        if ($courselog) {
+            mtrace("Logs para o curso {$courseid} já foram enviados anteriormente.\n");
+            return;
+        }
 
         $courselog = $DB->get_record('block_mad2api_course_logs', ['courseid' => $courseid]);
 
-        $count = $DB->count_records_sql("
-            SELECT COUNT(DISTINCT m.id)
-              FROM {logstore_standard_log} m
-             WHERE m.courseid = :courseid
-        ", ['courseid' => $courseid]);
-
+        $count = $DB->count_records('logstore_standard_log', ['courseid' => $courseid]);
         $perpage = 100;
         $endpage = (int)ceil($count / $perpage);
 
-        echo("Sending {$count} logs \n");
+        mtrace("Enviando {$count} logs para o curso {$courseid} ({$endpage} páginas)\n");
 
-        $startPage = !empty($courselog->lastlogpage) ? (int)$courselog->lastlogpage : 1;
+        $startpage = (!empty($courselog) && !empty($courselog->lastlogpage))
+            ? (int)$courselog->lastlogpage
+            : 1;
 
-        for ($currentpage = $startPage; $currentpage <= $endpage; $currentpage++) {
-            if ($courselog) {
-                $updatedattributes = [
-                    'id'            => $courselog->id,
-                    'lastlogpage' => $currentpage,
-                    'updatedat'    => date('Y-m-d H:i:s')
-                ];
-                $DB->update_record('block_mad2api_course_logs', $updatedattributes, false);
-            }
+        for ($currentpage = $startpage; $currentpage <= $endpage; $currentpage++) {
 
             $offset = ($currentpage - 1) * $perpage;
 
             $logs = $DB->get_records_sql("
                 SELECT m.*
-                  FROM {logstore_standard_log} m
-                 WHERE m.courseid = :courseid
-                 GROUP BY m.id
+                FROM {logstore_standard_log} m
+                WHERE m.courseid = :courseid
+                ORDER BY m.id ASC
             ", ['courseid' => $courseid], $offset, $perpage);
+
+            mtrace("Enviando página {$currentpage} com " . count($logs) . " logs \n");
 
             foreach ($logs as $id => $log) {
                 if ($log->eventname !== '\core\event\course_module_created') {
@@ -560,7 +558,7 @@ class mad_dashboard extends external_api {
                 }
 
                 if ($cm) {
-                    $grades = grade_get_grades($cm->course, 'mod', $cm->modname, $cm->instance);
+                    $grades   = grade_get_grades($cm->course, 'mod', $cm->modname, $cm->instance);
                     $gradable = !empty($grades->items);
 
                     $activityurlout = (new \moodle_url("/mod/{$cm->modname}/view.php", ['id' => $cm->id]))->out();
@@ -582,17 +580,35 @@ class mad_dashboard extends external_api {
 
             $data = ['logs' => $logs];
 
-            echo("Sending page {$currentpage} with " . count($logs) . " logs \n");
-
             $response = self::do_post_request("api/v2/courses/{$courseid}/logs/batch", $data, $courseid);
 
             if (!empty($response->error)) {
-                echo("Error sending logs: " . json_encode($response) . "\n");
+                mtrace("Erro ao enviar logs (página {$currentpage}): " . json_encode($response) . "\n");
+
+                return;
             }
+
+            if ($courselog) {
+                $updatedattributes = [
+                    'id'          => $courselog->id,
+                    'lastlogpage' => $currentpage + 1,
+                    'updatedat'   => date('Y-m-d H:i:s')
+                ];
+                $DB->update_record('block_mad2api_course_logs', $updatedattributes, false);
+                $courselog->lastlogpage = $currentpage + 1;
+            }
+        }
+
+        if ($courselog) {
+            $courselog->status    = 'done';
+            $courselog->updatedat = date('Y-m-d H:i:s');
+            $DB->update_record('block_mad2api_course_logs', $courselog, false);
         }
 
         self::send_original_course_logs($courseid);
         self::send_grades($courseid);
+
+        mtrace("Envio de logs concluído para curso {$courseid}.\n");
     }
 
     /**
@@ -605,7 +621,7 @@ class mad_dashboard extends external_api {
 
         $courseid = (int)$courseid;
 
-        echo("sending activities \n");
+        mtrace("sending activities \n");
 
         $count = $DB->count_records('grade_items', [
             'courseid' => $courseid,
@@ -616,7 +632,7 @@ class mad_dashboard extends external_api {
         $endpage = (int)ceil($count / $perpage);
         $url = "api/v2/courses/{$courseid}/events";
 
-        echo("Sending {$count} grade items for course {$courseid} in {$endpage} pages\n");
+        mtrace("Sending {$count} grade items for course {$courseid} in {$endpage} pages\n");
 
         for ($currentpage = 1; $currentpage <= $endpage; $currentpage++) {
             $offset = ($currentpage - 1) * $perpage;
@@ -695,7 +711,7 @@ class mad_dashboard extends external_api {
 
         $courseid = (int)$courseid;
 
-        echo("Sending original course logs for {$courseid}\n");
+        mtrace("Sending original course logs for {$courseid}\n");
 
         $count = $DB->count_records_sql("
             SELECT COUNT(DISTINCT cm.id)
@@ -707,13 +723,13 @@ class mad_dashboard extends external_api {
         $perpage = 25;
         $endpage = (int)ceil($count / $perpage);
 
-        echo("Sending {$count} activities for course {$courseid} in {$endpage} pages\n");
+        mtrace("Sending {$count} activities for course {$courseid} in {$endpage} pages\n");
 
         for ($currentpage = 1; $currentpage <= $endpage; $currentpage++) {
             $offset = ($currentpage - 1) * $perpage;
             $logs = [];
 
-            echo("Sending page {$currentpage} for course {$courseid} \n");
+            mtrace("Sending page {$currentpage} for course {$courseid} \n");
 
             $coursemodules = $DB->get_records_sql("
                 SELECT cm.id AS coursemoduleid,
@@ -727,12 +743,12 @@ class mad_dashboard extends external_api {
             ", ['courseid' => $courseid], $offset, $perpage);
 
             if (empty($coursemodules)) {
-                echo("No course modules found for course {$courseid} \n");
+                mtrace("No course modules found for course {$courseid} \n");
 
                 continue;
             }
 
-            echo("Found " . count($coursemodules) . " course modules for course {$courseid} \n");
+            mtrace("Found " . count($coursemodules) . " course modules for course {$courseid} \n");
 
             foreach ($coursemodules as $coursemodule) {
                 $tablename = $coursemodule->moduletype;
@@ -741,7 +757,7 @@ class mad_dashboard extends external_api {
                 $instance = $DB->get_record($tablename, ['id' => $instanceid]);
 
                 if (empty($instance) || !isset($instance->name)) {
-                    echo("Instance not found for table {$tablename} with ID {$instanceid}\n");
+                    mtrace("Instance not found for table {$tablename} with ID {$instanceid}\n");
 
                     continue;
                 }
@@ -749,7 +765,7 @@ class mad_dashboard extends external_api {
                 $context = \context_module::instance($coursemodule->coursemoduleid, IGNORE_MISSING);
 
                 if (empty($context) || !isset($context->instanceid)) {
-                    echo("Context not found for activity #{$coursemodule->coursemoduleid} \n");
+                    mtrace("Context not found for activity #{$coursemodule->coursemoduleid} \n");
 
                     continue;
                 }
@@ -793,7 +809,7 @@ class mad_dashboard extends external_api {
                     'timecreated'       => $instance->timemodified ?? time()
                 ];
 
-                echo("Sending activity {$instance->name} | {$instanceid} | visible? {$coursemodule->visible} \n");
+                mtrace("Sending activity {$instance->name} | {$instanceid} | visible? {$coursemodule->visible} \n");
             }
 
             $data = ['logs' => $logs];
@@ -801,7 +817,7 @@ class mad_dashboard extends external_api {
             try {
                 self::do_post_request("api/v2/courses/{$courseid}/logs/batch", $data, $courseid);
             } catch (\Exception $e) {
-                echo("Error sending logs: " . $e->getMessage() . "\n");
+                mtrace("Error sending logs: " . $e->getMessage() . "\n");
             }
         }
     }

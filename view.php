@@ -1,5 +1,5 @@
 <?php
-// This file is part of Moodle - https://moodle.org/
+// This file is part of Moodle - https://moodle.org/.
 //
 // Moodle is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
- * LTI of LANSE dashboard view page.
+ * LANSE dashboard view page.
  *
  * @package   block_mad2api
  * @copyright 2025
@@ -23,18 +23,32 @@
  */
 
 require('../../config.php');
-require_once('classes/mad_dashboard.php');
+require_once(__DIR__ . '/classes/mad_dashboard.php');
+
+global $CFG, $PAGE, $OUTPUT;
 
 $courseid   = required_param('courseid', PARAM_INT);
+// Optional param kept for backwards compatibility (not used at the moment).
 $coursename = optional_param('coursename', '', PARAM_TEXT);
 
 require_login($courseid);
-$context = context_course::instance($courseid, MUST_EXIST);
 
+$context = context_course::instance($courseid, MUST_EXIST);
 require_capability('block/mad2api:view', $context);
 
 $course = get_course($courseid);
 $coursefullname = format_string($course->fullname, true, ['context' => $context]);
+
+// PAGE setup MUST happen before any $OUTPUT->header() call.
+$PAGE->set_url(new moodle_url('/blocks/mad2api/view.php', ['courseid' => $courseid]));
+$PAGE->set_context($context);
+
+if ((int)$CFG->version < 2022041900) {
+    $PAGE->set_pagelayout('standard');
+}
+
+$PAGE->set_title(get_string('page_title', 'block_mad2api'));
+$PAGE->set_heading(get_string('page_heading', 'block_mad2api', ['coursefullname' => $coursefullname]));
 
 $appurl = get_config('block_mad2api', 'appurl');
 
@@ -44,7 +58,6 @@ if (empty($appurl)) {
     \core\notification::error(get_string('configmissing', 'error') . ' (block_mad2api appurl)');
 
     echo $OUTPUT->footer();
-
     exit;
 }
 
@@ -53,89 +66,97 @@ try {
 } catch (\moodle_exception $e) {
     echo $OUTPUT->header();
 
-    \core\notification::error('Falha ao contatar a API (erro Moodle).');
-
+    \core\notification::error(get_string('api_contact_error', 'block_mad2api'));
     debugging('mad2api api_enable_call moodle_exception: ' . $e->getMessage(), DEBUG_DEVELOPER);
 
     echo $OUTPUT->footer();
-
     exit;
 } catch (\Throwable $e) {
     echo $OUTPUT->header();
 
-    \core\notification::error('Falha ao contatar a API. Tente novamente mais tarde.');
-
+    \core\notification::error(get_string('api_contact_error_retry', 'block_mad2api'));
     debugging('mad2api api_enable_call throwable: ' . $e->getMessage(), DEBUG_DEVELOPER);
 
     echo $OUTPUT->footer();
-
     exit;
 }
 
 if (!$response || !is_object($response)) {
     echo $OUTPUT->header();
 
-    \core\notification::error('Resposta da API inválida.');
+    \core\notification::error(get_string('api_response_invalid', 'block_mad2api'));
 
     echo $OUTPUT->footer();
-
     exit;
 }
 
-$token = $response->token ?? null;
+$token          = $response->token ?? null;
 $organizationid = isset($response->organizationId) ? (int)$response->organizationId : 0;
-$apicourseid = isset($response->courseId) ? (int)$response->courseId : 0;
+$apicourseid    = isset($response->courseId) ? (int)$response->courseId : 0;
 
 if (empty($token)) {
     echo $OUTPUT->header();
 
-    \core\notification::error('Token não recebido da API.');
+    \core\notification::error(get_string('api_token_missing', 'block_mad2api'));
 
     echo $OUTPUT->footer();
-
     exit;
 }
 
-$PAGE->set_url(new moodle_url('/blocks/mad2api/view.php', ['courseid' => $courseid]));
-$PAGE->set_context($context);
-
-if ((int)$CFG->version < 2022041900) {
-    $PAGE->set_pagelayout('standard');
-}
-
-$PAGE->set_title("LANSE - Dashboard");
-$PAGE->set_heading("Dashboard LANSE - Curso: " . $coursefullname);
-
 echo $OUTPUT->header();
 
+// Iframe with LANSE dashboard.
 echo html_writer::tag('iframe', '', [
-    'id' => 'lanseFrame',
-    'src' => rtrim($appurl, '/') . '/moodle/lti',
-    'width' => '100%',
-    'height' => '700',
-    'style' => 'border:none;',
-    'allowfullscreen' => 'true'
+    'id'             => 'lanseFrame',
+    'src'            => rtrim($appurl, '/') . '/moodle/lti',
+    'width'          => '100%',
+    'height'         => '700',
+    'style'          => 'border:none;',
+    'allowfullscreen'=> 'true'
 ]);
 
+// Payload to send via postMessage.
 $payload = [
     'type'           => 'auth',
     'token'          => $token,
     'courseId'       => (int)$apicourseid,
-    'organizationId' => (int)$organizationid
+    'organizationId' => (int)$organizationid,
 ];
 
-echo html_writer::script(
-    '(function(){' .
-        'var f=document.getElementById("lanseFrame");' .
-        'if(!f){return;}' .
-        'f.addEventListener("load",function(){' .
-            'try{' .
-                'f.contentWindow.postMessage(' . json_encode($payload, JSON_UNESCAPED_SLASHES) . ', ' . json_encode($appurl, JSON_UNESCAPED_SLASHES) . ');' .
-            '}catch(e){' .
-                'console && console.error && console.error("Erro ao enviar postMessage para LANSE:", e);' .
-            '}' .
-        '});' .
-    '})();'
+$postmessageerror = addslashes(get_string('post_message_error', 'block_mad2api'));
+
+// JS that posts the payload to the iframe once it loads.
+$js = <<<JS
+(function() {
+    var f = document.getElementById('lanseFrame');
+    if (!f) { return; }
+
+    f.addEventListener('load', function() {
+        try {
+            f.contentWindow.postMessage(
+                {$GLOBALS['OUTPUT']->render_from_template('core/empty', [])} // placeholder (we won't actually use this)
+            );
+        } catch (e) {
+            if (console && console.error) {
+                console.error("{$postmessageerror}: " + e);
+            }
+        }
+    });
+})();
+JS;
+
+// Replace the placeholder postMessage call with the correct JSON (to keep PHP string building simple).
+$js = str_replace(
+    '{$GLOBALS[\'OUTPUT\']->render_from_template(\'core/empty\', [])}',
+    json_encode($payload, JSON_UNESCAPED_SLASHES),
+    $js
 );
+$js = str_replace(
+    ');',
+    ', ' . json_encode($appurl, JSON_UNESCAPED_SLASHES) . ');',
+    $js
+);
+
+echo html_writer::script($js);
 
 echo $OUTPUT->footer();

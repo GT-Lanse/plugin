@@ -63,3 +63,28 @@ $string['privacy:metadata:external:progress'] = 'Progress/Activities completion 
 $string['privacy:metadata:external:lastaccess'] = 'Last access timestamps used for activity indicators.';
 
 $string['privacy:export:path'] = 'MAD2 API block data';
+
+// view.php
+$string['api_contact_error'] = 'Falha ao contatar a API (erro Moodle).';
+$string['api_contact_error_retry'] = 'Falha ao contatar a API. Tente novamente mais tarde.';
+$string['api_response_invalid'] = 'Resposta da API inválida.';
+$string['api_token_missing'] = 'Token não recebido da API.';
+$string['page_title'] = 'LANSE - Dashboard';
+$string['page_heading'] = 'Dashboard LANSE - Curso: {$a->coursefullname}';
+$string['post_message_error'] = 'Erro ao enviar postMessage para LANSE:';
+
+// settings.php
+$string['adminroles'] = 'Perfil Coordenador na LANSE';
+$string['adminroles_desc'] = 'Perfis que terão acesso ao Plugin como coordenador';
+$string['apikey'] = 'Chave API KEY Plugin';
+$string['apiurl'] = 'URL da API';
+$string['appurl'] = 'URL da plataforma';
+$string['organization'] = 'Nome da organização';
+$string['roles'] = 'Perfil Professor/Tutor na LANSE';
+$string['roles_desc'] = 'Perfis que terão acesso ao Plugin como professor/tutor';
+$string['studentrole'] = 'Selecione o papel de estudante na LANSE';
+$string['studentrole_desc'] = 'Perfil utilizado para identificar os estudantes no Plugin';
+
+// classes/task/mad_logger.php
+$string['send_logs_task_name'] = 'Envio de Logs LANSE';
+$string['check_resend_data_task_name'] = 'Verificação de Reenvio de Dados LANSE';
