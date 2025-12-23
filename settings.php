@@ -29,8 +29,8 @@ global $DB;
 $roles = $DB->get_records('role');
 
 foreach ($roles as $role) {
-    $role_name = role_get_name($role);
-    $options[$role->id] = $role_name;
+    $rolename = role_get_name($role);
+    $options[$role->id] = $rolename;
 }
 
 $settings->add(new admin_setting_heading('sampleheader',

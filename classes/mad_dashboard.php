@@ -46,22 +46,22 @@ class mad_dashboard extends external_api {
     public function __construct() {}
 
     /**
-     * Returns the expected parameters for the enable function.
+     * Returns the expected parameters for the enable_course function.
      *
      * @return external_function_parameters
     */
-    public static function enable_parameters() {
+    public static function enable_course_parameters() {
         return new external_function_parameters([
             'courseid' => new external_value(PARAM_INT, 'Course id', VALUE_DEFAULT, 0),
         ]);
     }
 
     /**
-     * Returns the structure of the data returned by the enable function.
+     * Returns the structure of the data returned by the enable_course function.
      *
      * @return external_multiple_structure
     */
-    public static function enable_returns() {
+    public static function enable_course_returns() {
         return new external_multiple_structure(
             new external_single_structure([
                 'enabled' => new external_value(PARAM_BOOL, VALUE_DEFAULT, true),
@@ -78,7 +78,7 @@ class mad_dashboard extends external_api {
      * @return array An array containing the status of the operation and the URL if successful.
      * @throws \moodle_exception If there is an error during the process.
     */
-    public static function enable($courseid) {
+    public static function enable_course($courseid) {
         global $DB, $USER;
 
         $params = self::validate_parameters(self::enable_parameters(), ['courseid' => $courseid]);
@@ -137,22 +137,22 @@ class mad_dashboard extends external_api {
     }
 
     /**
-     * Returns the expected parameters for the disable function.
+     * Returns the expected parameters for the disable_course function.
      *
      * @return external_function_parameters
     */
-    public static function disable_parameters() {
+    public static function disable_course_parameters() {
         return new external_function_parameters([
             'courseid' => new external_value(PARAM_INT, 'Course id', VALUE_DEFAULT, 0),
         ]);
     }
 
     /**
-     * Returns the structure of the data returned by the disable function.
+     * Returns the structure of the data returned by the disable_course function.
      *
      * @return external_multiple_structure
     */
-    public static function disable_returns() {
+    public static function disable_course_returns() {
         return new external_multiple_structure(
             new external_single_structure([
                 'disabled' => new external_value(PARAM_BOOL, VALUE_REQUIRED)
@@ -167,18 +167,18 @@ class mad_dashboard extends external_api {
      * @return array An array containing the status of the operation.
      * @throws \moodle_exception If there is an error during the process.
     */
-    public static function disable($courseid) {
+    public static function disable_course($courseid) {
         global $DB;
 
         $params = self::validate_parameters(self::disable_parameters(), ['courseid' => $courseid]);
         $courseid = (int)$params['courseid'];
 
-        $dashboardSetting = $DB->get_record('block_mad2api_dashboard_settings', ['courseid' => $courseid]);
+        $dashboardsetting = $DB->get_record('block_mad2api_dashboard_settings', ['courseid' => $courseid]);
 
         $databaseresponse = false;
-        if (!empty($dashboardSetting->id)) {
+        if (!empty($dashboardsetting->id)) {
             $data = [
-                'id'         => $dashboardSetting->id,
+                'id'         => $dashboardsetting->id,
                 'courseid'  => $courseid,
                 'updatedat' => date('Y-m-d H:i:s'),
                 'isenabled' => 0
@@ -297,8 +297,8 @@ class mad_dashboard extends external_api {
         $ispermitted = false;
         $permittedroles = self::parse_role_ids_list((string)get_config('block_mad2api', 'roles'));
 
-        foreach (self::get_user_roles($USER->id, $contextid) as $user_role) {
-            if (in_array((int)$user_role->roleid, $permittedroles, true)) {
+        foreach (self::get_user_roles($USER->id, $contextid) as $userrole) {
+            if (in_array((int)$userrole->roleid, $permittedroles, true)) {
                 $ispermitted = true;
             }
         }
@@ -317,8 +317,8 @@ class mad_dashboard extends external_api {
         $ispermitted = false;
         $permittedroles = self::parse_role_ids_list((string)get_config('block_mad2api', 'adminroles'));
 
-        foreach (self::get_user_roles($USER->id, $contextid) as $user_role) {
-            if (in_array((int)$user_role->roleid, $permittedroles, true)) {
+        foreach (self::get_user_roles($USER->id, $contextid) as $userrole) {
+            if (in_array((int)$userrole->roleid, $permittedroles, true)) {
                 $ispermitted = true;
             }
         }
@@ -526,9 +526,9 @@ class mad_dashboard extends external_api {
 
             $logs = $DB->get_records_sql("
                 SELECT m.*
-                FROM {logstore_standard_log} m
-                WHERE m.courseid = :courseid
-                ORDER BY m.id ASC
+                  FROM {logstore_standard_log} m
+                 WHERE m.courseid = :courseid
+              ORDER BY m.id ASC
             ", ['courseid' => $courseid], $offset, $perpage);
 
             mtrace("Enviando página {$currentpage} com " . count($logs) . " logs \n");
@@ -545,11 +545,11 @@ class mad_dashboard extends external_api {
                 }
 
                 if (!$cm && !empty($log->other)) {
-                    $otherObj = json_decode($log->other);
+                    $otherobj = json_decode($log->other);
 
-                    if ($otherObj) {
-                        $modname    = $otherObj->modulename ?? ($otherObj->module ?? null);
-                        $instanceid = $otherObj->instanceid ?? ($otherObj->id ?? null);
+                    if ($otherobj) {
+                        $modname    = $otherobj->modulename ?? ($otherobj->module ?? null);
+                        $instanceid = $otherobj->instanceid ?? ($otherobj->id ?? null);
 
                         if ($modname && $instanceid) {
                             $cm = get_coursemodule_from_instance($modname, $instanceid, $courseid, false, IGNORE_MISSING);

@@ -84,11 +84,11 @@ function xmldb_block_mad2api_upgrade($oldversion)
     );
 
     foreach ($dashboardsettings as $dashboardsetting) {
-      $courseLog = $DB->get_record(
+      $courselog = $DB->get_record(
         "block_mad2api_course_logs", array('courseid' => $dashboardsetting->courseid)
       );
 
-      if (!isset($courseLog->id)) {
+      if (!isset($courselog->id)) {
         $params = array(
           'courseid' => $dashboardsetting->courseid,
           'status' => 'todo',
