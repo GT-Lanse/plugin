@@ -242,6 +242,14 @@ function xmldb_block_mad2api_upgrade($oldversion)
     upgrade_block_savepoint(true, 2025112300, 'mad2api');
   }
 
+  if ($oldversion < 2026022300) {
+    $table = new xmldb_table('block_mad2api_dashboard_settings');
+
+    if ($dbman->table_exists($table)) {
+      $dbman->rename_table($table, 'block_mad2api_dash_settings');
+    }
+  }
+
   if (!!$DB->get_record("block_mad2api_api_settings", array())) {
     return true;
   }

@@ -4,7 +4,7 @@
   xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
 >
   <TABLES>
-    <TABLE NAME="block_mad2api_dashboard_settings" COMMENT="This table saves the course dashboard data">
+    <TABLE NAME="block_mad2api_dash_settings" COMMENT="This table saves the course dashboard data">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
         <FIELD NAME="createdat" TYPE="char" LENGTH="50" NOTNULL="true" SEQUENCE="false"/>

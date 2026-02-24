@@ -81,10 +81,10 @@ class mad_dashboard extends external_api {
     public static function enable_course($courseid) {
         global $DB, $USER;
 
-        $params = self::validate_parameters(self::enable_parameters(), ['courseid' => $courseid]);
+        $params = self::validate_parameters(self::enable_course_parameters(), ['courseid' => $courseid]);
         $courseid = (int)$params['courseid'];
 
-        $dashboardsetting = $DB->get_record('block_mad2api_dashboard_settings', ['courseid' => $courseid]);
+        $dashboardsetting = $DB->get_record('block_mad2api_dash_settings', ['courseid' => $courseid]);
 
         if ($dashboardsetting && (int)$dashboardsetting->isenabled === 1) {
             $response = self::api_dashboard_auth_url($courseid);
@@ -113,9 +113,9 @@ class mad_dashboard extends external_api {
 
         if (!empty($dashboardsetting->id)) {
             $recorddatabasesettings['id'] = $dashboardsetting->id;
-            $databaseresponse = $DB->update_record('block_mad2api_dashboard_settings', $recorddatabasesettings, false);
+            $databaseresponse = $DB->update_record('block_mad2api_dash_settings', $recorddatabasesettings, false);
         } else {
-            $databaseresponse = (bool)$DB->insert_record('block_mad2api_dashboard_settings', $recorddatabasesettings, false);
+            $databaseresponse = (bool)$DB->insert_record('block_mad2api_dash_settings', $recorddatabasesettings, false);
         }
 
         $recordcourselog = [
@@ -170,10 +170,10 @@ class mad_dashboard extends external_api {
     public static function disable_course($courseid) {
         global $DB;
 
-        $params = self::validate_parameters(self::disable_parameters(), ['courseid' => $courseid]);
+        $params = self::validate_parameters(self::disable_course_parameters(), ['courseid' => $courseid]);
         $courseid = (int)$params['courseid'];
 
-        $dashboardsetting = $DB->get_record('block_mad2api_dashboard_settings', ['courseid' => $courseid]);
+        $dashboardsetting = $DB->get_record('block_mad2api_dash_settings', ['courseid' => $courseid]);
 
         $databaseresponse = false;
         if (!empty($dashboardsetting->id)) {
@@ -183,7 +183,7 @@ class mad_dashboard extends external_api {
                 'updatedat' => date('Y-m-d H:i:s'),
                 'isenabled' => 0
             ];
-            $databaseresponse = $DB->update_record('block_mad2api_dashboard_settings', $data);
+            $databaseresponse = $DB->update_record('block_mad2api_dash_settings', $data);
         }
 
         return [['disabled' => (bool)$databaseresponse]];
@@ -900,7 +900,7 @@ class mad_dashboard extends external_api {
 
         $userid = (int)$userid;
 
-        $monitoredcourses = $DB->get_records('block_mad2api_dashboard_settings', ['isenabled' => 1]);
+        $monitoredcourses = $DB->get_records('block_mad2api_dash_settings', ['isenabled' => 1]);
 
         foreach ($monitoredcourses as $monitoredcourse) {
             $courseidrow = $DB->get_record_sql("
@@ -1205,7 +1205,7 @@ class mad_dashboard extends external_api {
 
         if (in_array((int)$httpstatus, [400, 404], true)) {
             $resources = $DB->get_records(
-                'block_mad2api_dashboard_settings', ['courseid' => (int)$courseid, 'isenabled' => 1]
+                'block_mad2api_dash_settings', ['courseid' => (int)$courseid, 'isenabled' => 1]
             );
 
             foreach ($resources as $resource) {
@@ -1214,7 +1214,7 @@ class mad_dashboard extends external_api {
                     'isenabled'  => 0
                 ];
 
-                $DB->update_record('block_mad2api_dashboard_settings', $data, false);
+                $DB->update_record('block_mad2api_dash_settings', $data, false);
             }
         }
     }
@@ -1235,7 +1235,7 @@ class mad_dashboard extends external_api {
     public static function is_course_enabled($courseid) {
         global $DB;
 
-        return (bool)$DB->get_record('block_mad2api_dashboard_settings', [
+        return (bool)$DB->get_record('block_mad2api_dash_settings', [
             'courseid'  => (int)$courseid,
             'isenabled' => 1
         ]);

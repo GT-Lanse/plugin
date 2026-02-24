@@ -115,14 +115,14 @@ class block_mad2api extends block_base {
             'coursename' => format_string($COURSE->fullname)
         ));
 
-        $enabled = $DB->get_record('block_mad2api_dashboard_settings', array(
+        $enabled = $DB->get_record('block_mad2api_dash_settings', array(
             'courseid'  => $COURSE->id,
             'isenabled' => 1
         ));
 
         if ($enabled) {
             \block_mad2api\mad_dashboard::check_data_on_api($COURSE->id);
-            \block_mad2api\mad_dashboard::enable($COURSE->id);
+            \block_mad2api\mad_dashboard::enable_course($COURSE->id);
         }
 
         $openbtn = html_writer::link(

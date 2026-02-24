@@ -32,8 +32,8 @@ function xmldb_block_mad2api_uninstall() {
       $DB->delete_records('block_mad2api_course_logs');
     }
 
-    if ($DB->get_manager()->table_exists('block_mad2api_dashboard_settings')) {
-      $DB->delete_records('block_mad2api_dashboard_settings');
+    if ($DB->get_manager()->table_exists('block_mad2api_dash_settings')) {
+      $DB->delete_records('block_mad2api_dash_settings');
     }
 
     $DB->delete_records_select(
