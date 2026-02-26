@@ -28,18 +28,17 @@ require_once(__DIR__ . '/classes/mad_dashboard.php');
 global $CFG, $PAGE, $OUTPUT;
 
 $courseid   = required_param('courseid', PARAM_INT);
-// Optional param kept for backwards compatibility (not used at the moment).
 $coursename = optional_param('coursename', '', PARAM_TEXT);
 
 require_login($courseid);
 
 $context = context_course::instance($courseid, MUST_EXIST);
+
 require_capability('block/mad2api:view', $context);
 
 $course = get_course($courseid);
 $coursefullname = format_string($course->fullname, true, ['context' => $context]);
 
-// PAGE setup MUST happen before any $OUTPUT->header() call.
 $PAGE->set_url(new moodle_url('/blocks/mad2api/view.php', ['courseid' => $courseid]));
 $PAGE->set_context($context);
 
@@ -48,16 +47,26 @@ if ((int)$CFG->version < 2022041900) {
 }
 
 $PAGE->set_title(get_string('page_title', 'block_mad2api'));
-$PAGE->set_heading(get_string('page_heading', 'block_mad2api', ['coursefullname' => $coursefullname]));
+$PAGE->set_heading(
+    get_string(
+        'page_heading',
+        'block_mad2api',
+        ['coursefullname' => $coursefullname]
+    )
+);
+
 
 $appurl = get_config('block_mad2api', 'appurl');
 
 if (empty($appurl)) {
     echo $OUTPUT->header();
 
-    \core\notification::error(get_string('configmissing', 'error') . ' (block_mad2api appurl)');
+    \core\notification::error(
+        get_string('configmissing', 'error') . ' (block_mad2api appurl)'
+    );
 
     echo $OUTPUT->footer();
+
     exit;
 }
 
@@ -67,17 +76,29 @@ try {
     echo $OUTPUT->header();
 
     \core\notification::error(get_string('api_contact_error', 'block_mad2api'));
-    debugging('mad2api api_enable_call moodle_exception: ' . $e->getMessage(), DEBUG_DEVELOPER);
+
+    debugging(
+        'mad2api api_enable_call moodle_exception: ' . $e->getMessage(),
+        DEBUG_DEVELOPER
+    );
 
     echo $OUTPUT->footer();
+
     exit;
 } catch (\Throwable $e) {
     echo $OUTPUT->header();
 
-    \core\notification::error(get_string('api_contact_error_retry', 'block_mad2api'));
-    debugging('mad2api api_enable_call throwable: ' . $e->getMessage(), DEBUG_DEVELOPER);
+    \core\notification::error(
+        get_string('api_contact_error_retry', 'block_mad2api')
+    );
+
+    debugging(
+        'mad2api api_enable_call throwable: ' . $e->getMessage(),
+        DEBUG_DEVELOPER
+    );
 
     echo $OUTPUT->footer();
+
     exit;
 }
 
@@ -87,12 +108,13 @@ if (!$response || !is_object($response)) {
     \core\notification::error(get_string('api_response_invalid', 'block_mad2api'));
 
     echo $OUTPUT->footer();
+
     exit;
 }
 
-$token          = $response->token ?? null;
+$token = $response->token ?? null;
 $organizationid = isset($response->organizationId) ? (int)$response->organizationId : 0;
-$apicourseid    = isset($response->courseId) ? (int)$response->courseId : 0;
+$apicourseid = isset($response->courseId) ? (int)$response->courseId : 0;
 
 if (empty($token)) {
     echo $OUTPUT->header();
@@ -100,6 +122,7 @@ if (empty($token)) {
     \core\notification::error(get_string('api_token_missing', 'block_mad2api'));
 
     echo $OUTPUT->footer();
+
     exit;
 }
 
@@ -107,55 +130,50 @@ echo $OUTPUT->header();
 
 // Iframe with LANSE dashboard.
 echo html_writer::tag('iframe', '', [
-    'id'             => 'lanseFrame',
-    'src'            => rtrim($appurl, '/') . '/moodle/lti',
-    'width'          => '100%',
-    'height'         => '700',
-    'style'          => 'border:none;',
-    'allowfullscreen'=> 'true'
+    'id'              => 'lanseFrame',
+    'src'             => rtrim($appurl, '/') . '/moodle/lti',
+    'width'           => '100%',
+    'height'          => '700',
+    'style'           => 'border:none;',
+    'allowfullscreen' => 'true',
 ]);
 
-// Payload to send via postMessage.
 $payload = [
     'type'           => 'auth',
     'token'          => $token,
-    'courseId'       => (int)$apicourseid,
-    'organizationId' => (int)$organizationid,
+    'courseId'       => $apicourseid,
+    'organizationId' => $organizationid,
 ];
 
-$postmessageerror = addslashes(get_string('post_message_error', 'block_mad2api'));
+$payloadjson  = json_encode($payload, JSON_UNESCAPED_SLASHES);
+$targetorigin = json_encode(rtrim($appurl, '/'), JSON_UNESCAPED_SLASHES);
 
-// JS that posts the payload to the iframe once it loads.
+$postmessageerror = addslashes(
+    get_string('post_message_error', 'block_mad2api')
+);
+
 $js = <<<JS
 (function() {
-    var f = document.getElementById('lanseFrame');
-    if (!f) { return; }
+    var frame = document.getElementById('lanseFrame');
 
-    f.addEventListener('load', function() {
+    if (!frame) {
+        return;
+    }
+
+    frame.addEventListener('load', function() {
         try {
-            f.contentWindow.postMessage(
-                {$GLOBALS['OUTPUT']->render_from_template('core/empty', [])} // placeholder (we won't actually use this)
+            frame.contentWindow.postMessage(
+                {$payloadjson},
+                {$targetorigin}
             );
         } catch (e) {
-            if (console && console.error) {
+            if (window.console && console.error) {
                 console.error("{$postmessageerror}: " + e);
             }
         }
     });
 })();
 JS;
-
-// Replace the placeholder postMessage call with the correct JSON (to keep PHP string building simple).
-$js = str_replace(
-    '{$GLOBALS[\'OUTPUT\']->render_from_template(\'core/empty\', [])}',
-    json_encode($payload, JSON_UNESCAPED_SLASHES),
-    $js
-);
-$js = str_replace(
-    ');',
-    ', ' . json_encode($appurl, JSON_UNESCAPED_SLASHES) . ');',
-    $js
-);
 
 echo html_writer::script($js);
 

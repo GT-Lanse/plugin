@@ -1124,7 +1124,7 @@ class mad_dashboard extends external_api {
 
         $courseid = (int)$courseid;
 
-        $rolescfg = (string)get_config('block_mad2api', 'admin_roles');
+        $rolescfg = (string)get_config('block_mad2api', 'adminroles');
         $rolesid  = self::parse_role_ids_list($rolescfg);
         if (empty($rolesid)) { return []; }
 

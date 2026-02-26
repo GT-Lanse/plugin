@@ -45,7 +45,7 @@ $settings->add(new admin_setting_configtext('block_mad2api/organization',
 $settings->add(new admin_setting_configtext('block_mad2api/apiurl',
                                                get_string('apiurl', 'block_mad2api'),
                                                '',
-                                               'https://lanse.sites.ufsc.br/api'));
+                                               'https://lanse.sites.ufsc.br'));
 
 $settings->add(new admin_setting_configtext('block_mad2api/appurl',
                                                get_string('appurl', 'block_mad2api'),

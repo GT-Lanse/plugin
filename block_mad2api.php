@@ -100,11 +100,6 @@ class block_mad2api extends block_base {
         $iscoord   = \block_mad2api\mad_dashboard::is_current_user_course_coordinator($context->id);
 
         if (!$isteacher && !$iscoord) {
-            $this->content->text = html_writer::div(
-                get_string('not_teacher', 'block_mad2api'),
-                'alert alert-info'
-            );
-
             return $this->content;
         }
 
@@ -125,17 +120,19 @@ class block_mad2api extends block_base {
             \block_mad2api\mad_dashboard::enable_course($COURSE->id);
         }
 
-        $openbtn = html_writer::link(
+        $actions = array();
+
+        $actions[] = html_writer::link(
             $ltiurl,
             get_string('access_dashboard', 'block_mad2api'),
             array(
                 'class' => 'btn btr-primary',
                 'id'    => 'lti-lanse',
+                'class' => 'plugin-link btn' . (!$enabled ? ' disabled' : ''),
                 'style' => 'width:100%;margin-top:10px;background-color:#04626a;color:#fff;'
             )
         );
 
-        $actions = array();
 
         $actions[] = html_writer::tag(
             'a',
@@ -144,7 +141,9 @@ class block_mad2api extends block_base {
                 'id'    => 'access-dashboard',
                 'href'  => $appurl,
                 'class' => 'plugin-link btn',
-                'style' => 'width:100%;margin:10px 0;color:#04626a;border:3px solid #04626a;'
+                'class' => 'plugin-link btn' . (!$enabled ? ' disabled' : ''),
+                'style' => 'width:100%;margin:10px 0;color:#04626a;border:3px solid #04626a;',
+                'target' => '_blank'
             )
         );
 
@@ -170,8 +169,7 @@ class block_mad2api extends block_base {
             )
         );
 
-        $this->content->text = $openbtn .
-            html_writer::div(implode('', $actions), 'plugin-link-container');
+        $this->content->text = html_writer::div(implode('', $actions), 'plugin-link-container');
 
         $PAGE->requires->js_call_amd(
             'block_mad2api/enable_button_api_call', 'init',
