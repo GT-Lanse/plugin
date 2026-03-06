@@ -83,6 +83,10 @@ class mad_dashboard extends external_api {
 
         $params = self::validate_parameters(self::enable_course_parameters(), ['courseid' => $courseid]);
         $courseid = (int)$params['courseid'];
+        $course = get_course($courseid);
+        $context = \context_course::instance($course->id);
+
+        require_capability('moodle/course:update', $context);
 
         $dashboardsetting = $DB->get_record('block_mad2api_dash_settings', ['courseid' => $courseid]);
 
@@ -172,6 +176,10 @@ class mad_dashboard extends external_api {
 
         $params = self::validate_parameters(self::disable_course_parameters(), ['courseid' => $courseid]);
         $courseid = (int)$params['courseid'];
+        $course = get_course($courseid);
+        $context = \context_course::instance($course->id);
+
+        require_capability('moodle/course:update', $context);
 
         $dashboardsetting = $DB->get_record('block_mad2api_dash_settings', ['courseid' => $courseid]);
 
