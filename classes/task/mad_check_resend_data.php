@@ -34,7 +34,7 @@ class mad_check_resend_data extends \core\task\scheduled_task {
   public function execute() {
     global $DB;
 
-    $records = $DB->get_records('block_mad2api_course_logs');
+    $records = $DB->get_records('block_mad2api_dash_settings', ['isenabled' => 1]);
 
     mtrace("Checking resend data for " . count($records) . " courses \n");
 

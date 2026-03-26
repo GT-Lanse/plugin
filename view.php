@@ -34,9 +34,16 @@ require_login($courseid);
 
 $context = context_course::instance($courseid, MUST_EXIST);
 
-require_capability('block/mad2api:view', $context);
+if (!\block_mad2api\mad_dashboard::current_user_can_view_dashboard($courseid)) {
+    throw new required_capability_exception($context, 'block/mad2api:viewdashboard', 'nopermissions', get_string('nopermissiondashboard', 'block_mad2api'));
+}
 
 $course = get_course($courseid);
+
+if (!\block_mad2api\mad_dashboard::is_course_enabled($courseid)) {
+    throw new moodle_exception('dashboardnotenabled', 'block_mad2api');
+}
+
 $coursefullname = format_string($course->fullname, true, ['context' => $context]);
 
 $PAGE->set_url(new moodle_url('/blocks/mad2api/view.php', ['courseid' => $courseid]));

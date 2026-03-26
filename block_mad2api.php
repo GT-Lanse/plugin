@@ -99,7 +99,7 @@ class block_mad2api extends block_base {
         $isteacher = \block_mad2api\mad_dashboard::is_current_user_course_teacher($context->id);
         $iscoord   = \block_mad2api\mad_dashboard::is_current_user_course_coordinator($context->id);
 
-        if (!$isteacher && !$iscoord) {
+        if ((!$isteacher && !$iscoord) || !\block_mad2api\mad_dashboard::current_user_can_view_dashboard((int)$COURSE->id, (int)$USER->id)) {
             return $this->content;
         }
 

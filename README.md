@@ -49,7 +49,6 @@ Bloco para Moodle que integra cursos à plataforma **LANSE**, permitindo habilit
 - **Configuração por curso**  
 - Adicione o bloco **LANSE Dashboard** na página do curso.  
 - Use os botões para habilitar ou desabilitar a integração no curso.  
-- Clique em *Carregar Dados Agora* para enviar dados manuais à API.
 
 ---
 

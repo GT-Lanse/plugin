@@ -72,6 +72,89 @@ class mad_dashboard extends external_api {
     }
 
     /**
+     * Checks whether the current user can manage monitoring for the course.
+     *
+     * The user must have the plugin capability and also match one of the
+     * configured dashboard roles used by the interface.
+     *
+     * @param int $courseid
+     * @param int|null $userid
+     * @return bool
+    */
+    public static function current_user_can_manage_monitoring($courseid, $userid = null) {
+        $courseid = (int)$courseid;
+        $userid = $userid ? (int)$userid : 0;
+        $context = \context_course::instance($courseid, MUST_EXIST);
+
+        if ($userid > 0) {
+            if (!has_capability('block/mad2api:managemonitoring', $context, $userid)) {
+                return false;
+            }
+
+            return self::user_has_dashboard_role($userid, (int)$context->id);
+        }
+
+        if (!has_capability('block/mad2api:managemonitoring', $context)) {
+            return false;
+        }
+
+        return self::is_current_user_course_teacher((int)$context->id)
+            || self::is_current_user_course_coordinator((int)$context->id);
+    }
+
+    /**
+     * Checks whether the current user can access the dashboard page for the course.
+     *
+     * @param int $courseid
+     * @param int|null $userid
+     * @return bool
+    */
+    public static function current_user_can_view_dashboard($courseid, $userid = null) {
+        $courseid = (int)$courseid;
+        $userid = $userid ? (int)$userid : 0;
+        $context = \context_course::instance($courseid, MUST_EXIST);
+
+        if ($userid > 0) {
+            if (!has_capability('block/mad2api:viewdashboard', $context, $userid)) {
+                return false;
+            }
+
+            return self::user_has_dashboard_role($userid, (int)$context->id);
+        }
+
+        if (!has_capability('block/mad2api:viewdashboard', $context)) {
+            return false;
+        }
+
+        return self::is_current_user_course_teacher((int)$context->id)
+            || self::is_current_user_course_coordinator((int)$context->id);
+    }
+
+    /**
+     * Checks whether the provided user has one of the configured dashboard roles
+     * in the specified course context.
+     *
+     * @param int $userid
+     * @param int $contextid
+     * @return bool
+    */
+    public static function user_has_dashboard_role($userid, $contextid) {
+        $roles = self::get_user_roles((int)$userid, (int)$contextid);
+        $permittedroles = array_unique(array_merge(
+            self::parse_role_ids_list((string)get_config('block_mad2api', 'roles')),
+            self::parse_role_ids_list((string)get_config('block_mad2api', 'adminroles'))
+        ));
+
+        foreach ($roles as $userrole) {
+            if (in_array((int)$userrole->roleid, $permittedroles, true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Enables the dashboard for a given course.
      *
      * @param int $courseid The ID of the course to enable the dashboard for.
@@ -86,7 +169,9 @@ class mad_dashboard extends external_api {
         $course = get_course($courseid);
         $context = \context_course::instance($course->id);
 
-        require_capability('moodle/course:update', $context);
+        if (!self::current_user_can_manage_monitoring($courseid, (int)$USER->id)) {
+            throw new \required_capability_exception($context, 'block/mad2api:managemonitoring', 'nopermissions', get_string('nopermissionmonitoring', 'block_mad2api'));
+        }
 
         $dashboardsetting = $DB->get_record('block_mad2api_dash_settings', ['courseid' => $courseid]);
 
@@ -135,6 +220,9 @@ class mad_dashboard extends external_api {
 
         if (empty($courselog->id)) {
             $DB->insert_record('block_mad2api_course_logs', $recordcourselog, false);
+        } else {
+            $recordcourselog['id'] = $courselog->id;
+            $DB->update_record('block_mad2api_course_logs', $recordcourselog, false);
         }
 
         return [['enabled' => $databaseresponse, 'url' => $response->url, 'error' => false]];
@@ -179,7 +267,9 @@ class mad_dashboard extends external_api {
         $course = get_course($courseid);
         $context = \context_course::instance($course->id);
 
-        require_capability('moodle/course:update', $context);
+        if (!self::current_user_can_manage_monitoring($courseid)) {
+            throw new \required_capability_exception($context, 'block/mad2api:managemonitoring', 'nopermissions', get_string('nopermissionmonitoring', 'block_mad2api'));
+        }
 
         $dashboardsetting = $DB->get_record('block_mad2api_dash_settings', ['courseid' => $courseid]);
 
@@ -189,7 +279,7 @@ class mad_dashboard extends external_api {
                 'id'         => $dashboardsetting->id,
                 'courseid'  => $courseid,
                 'updatedat' => date('Y-m-d H:i:s'),
-                'isenabled' => 0
+                'isenabled' => 0,
             ];
             $databaseresponse = $DB->update_record('block_mad2api_dash_settings', $data);
         }
@@ -210,7 +300,7 @@ class mad_dashboard extends external_api {
         if (empty($response->data)) {
             mtrace("No pending activities found \n");
 
-            return;
+            return true;
         }
 
         mtrace("Found " . count($response->data) . " pending activities \n");
@@ -266,7 +356,14 @@ class mad_dashboard extends external_api {
     public static function check_data_on_api($courseid) {
         global $DB;
 
-        $lastlogs = array_slice($DB->get_records('block_mad2api_course_logs', ['courseid' => (int)$courseid, 'status' => 'done']), -1);
+        $courseid = (int)$courseid;
+
+        if (!self::is_course_enabled($courseid)) {
+            mtrace("Course #{$courseid} monitoring is disabled. Skipping resend check.\n");
+            return;
+        }
+
+        $lastlogs = array_slice($DB->get_records('block_mad2api_course_logs', ['courseid' => $courseid, 'status' => 'done']), -1);
         $courselog = !empty($lastlogs) ? $lastlogs[0] : null;
 
         if (!$courselog) {
@@ -466,7 +563,7 @@ class mad_dashboard extends external_api {
         $courselog = $DB->get_record('block_mad2api_course_logs', ['courseid' => $courseid, 'studentssent' => 1]);
 
         if ($courselog) {
-            return;
+            return true;
         }
 
         $count = self::get_course_students_count($courseid);
@@ -480,7 +577,12 @@ class mad_dashboard extends external_api {
                 'students' => self::get_course_students($courseid, $perpage, $offset)
             ];
 
-            self::do_post_request("api/v2/courses/{$courseid}/students/batch", $data, $courseid);
+            $response = self::do_post_request("api/v2/courses/{$courseid}/students/batch", $data, $courseid);
+
+            if (!empty($response->error)) {
+                mtrace("Error sending students for course {$courseid}: " . ($response->message ?? json_encode($response)) . "\n");
+                return false;
+            }
         }
 
         $courselog = $DB->get_record('block_mad2api_course_logs', ['courseid' => $courseid]);
@@ -494,6 +596,8 @@ class mad_dashboard extends external_api {
 
             $DB->update_record('block_mad2api_course_logs', $updatedattributes, false);
         }
+
+        return true;
     }
 
     /**
@@ -513,7 +617,7 @@ class mad_dashboard extends external_api {
 
         if ($courselog) {
             mtrace("Logs para o curso {$courseid} já foram enviados anteriormente.\n");
-            return;
+            return true;
         }
 
         $courselog = $DB->get_record('block_mad2api_course_logs', ['courseid' => $courseid]);
@@ -593,7 +697,7 @@ class mad_dashboard extends external_api {
             if (!empty($response->error)) {
                 mtrace("Erro ao enviar logs (página {$currentpage}): " . json_encode($response) . "\n");
 
-                return;
+                return false;
             }
 
             if ($courselog) {
@@ -617,6 +721,8 @@ class mad_dashboard extends external_api {
         self::send_grades($courseid);
 
         mtrace("Envio de logs concluído para curso {$courseid}.\n");
+
+        return true;
     }
 
     /**
@@ -1274,6 +1380,8 @@ class mad_dashboard extends external_api {
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
         $response = curl_exec($ch);
+        $curlerror = curl_error($ch);
+        $httpstatus = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
         if ($courseid !== null) {
             self::disable_course_if_not_found($ch, (int)$courseid);
@@ -1281,7 +1389,46 @@ class mad_dashboard extends external_api {
 
         curl_close($ch);
 
-        return json_decode($response ?? '');
+        if ($response === false) {
+            return (object)[
+                'error' => true,
+                'message' => 'cURL error: ' . $curlerror,
+                'httpstatus' => $httpstatus,
+            ];
+        }
+
+        $decoded = json_decode($response ?? '');
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return (object)[
+                'error' => true,
+                'message' => 'Invalid JSON response from API',
+                'httpstatus' => $httpstatus,
+                'rawresponse' => $response,
+            ];
+        }
+
+        if ($httpstatus >= 400) {
+            if (is_object($decoded)) {
+                $decoded->error = true;
+                $decoded->httpstatus = $httpstatus;
+                $decoded->message = $decoded->message ?? ('HTTP error ' . $httpstatus);
+                return $decoded;
+            }
+
+            return (object)[
+                'error' => true,
+                'message' => 'HTTP error ' . $httpstatus,
+                'httpstatus' => $httpstatus,
+                'rawresponse' => $response,
+            ];
+        }
+
+        if (is_object($decoded) && !property_exists($decoded, 'error')) {
+            $decoded->error = false;
+        }
+
+        return $decoded ?: (object)['error' => false];
     }
 
     /**
@@ -1309,10 +1456,37 @@ class mad_dashboard extends external_api {
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
         $response = curl_exec($ch);
+        $curlerror = curl_error($ch);
+        $httpstatus = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
         curl_close($ch);
 
-        return json_decode($response ?? '');
+        if ($response === false) {
+            return (object)['error' => true, 'message' => 'cURL error: ' . $curlerror, 'httpstatus' => $httpstatus];
+        }
+
+        $decoded = json_decode($response ?? '');
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return (object)['error' => true, 'message' => 'Invalid JSON response from API', 'httpstatus' => $httpstatus, 'rawresponse' => $response];
+        }
+
+        if ($httpstatus >= 400) {
+            if (is_object($decoded)) {
+                $decoded->error = true;
+                $decoded->httpstatus = $httpstatus;
+                $decoded->message = $decoded->message ?? ('HTTP error ' . $httpstatus);
+                return $decoded;
+            }
+
+            return (object)['error' => true, 'message' => 'HTTP error ' . $httpstatus, 'httpstatus' => $httpstatus, 'rawresponse' => $response];
+        }
+
+        if (is_object($decoded) && !property_exists($decoded, 'error')) {
+            $decoded->error = false;
+        }
+
+        return $decoded ?: (object)['error' => false];
     }
 
     /**
@@ -1336,10 +1510,37 @@ class mad_dashboard extends external_api {
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
         $response = curl_exec($ch);
+        $curlerror = curl_error($ch);
+        $httpstatus = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
         curl_close($ch);
 
-        return json_decode($response ?? '');
+        if ($response === false) {
+            return (object)['error' => true, 'message' => 'cURL error: ' . $curlerror, 'httpstatus' => $httpstatus];
+        }
+
+        $decoded = json_decode($response ?? '');
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return (object)['error' => true, 'message' => 'Invalid JSON response from API', 'httpstatus' => $httpstatus, 'rawresponse' => $response];
+        }
+
+        if ($httpstatus >= 400) {
+            if (is_object($decoded)) {
+                $decoded->error = true;
+                $decoded->httpstatus = $httpstatus;
+                $decoded->message = $decoded->message ?? ('HTTP error ' . $httpstatus);
+                return $decoded;
+            }
+
+            return (object)['error' => true, 'message' => 'HTTP error ' . $httpstatus, 'httpstatus' => $httpstatus, 'rawresponse' => $response];
+        }
+
+        if (is_object($decoded) && !property_exists($decoded, 'error')) {
+            $decoded->error = false;
+        }
+
+        return $decoded ?: (object)['error' => false];
     }
 
     /**

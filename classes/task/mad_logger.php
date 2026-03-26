@@ -50,10 +50,15 @@ class mad_logger extends \core\task\scheduled_task {
     );
 
     foreach ($records as $record) {
+      if (!\block_mad2api\mad_dashboard::is_course_enabled((int)$record->courseid)) {
+        mtrace("Skipping course #" . $record->courseid . " because monitoring is disabled.\n");
+        continue;
+      }
+
       $data = array(
         'id' => $record->id,
         'courseid' => $record->courseid,
-        'updated_at' => date('Y-m-d H:i:s'),
+        'updatedat' => date('Y-m-d H:i:s'),
         'status' => 'wip'
       );
 
@@ -64,17 +69,22 @@ class mad_logger extends \core\task\scheduled_task {
       mtrace("course log updated to wip \n");
 
       mtrace("sending students \n");
-      \block_mad2api\mad_dashboard::api_send_students($record->courseid);
+      $studentssent = \block_mad2api\mad_dashboard::api_send_students($record->courseid);
 
       mtrace("sending logs \n");
-      \block_mad2api\mad_dashboard::api_send_logs($record->courseid);
+      $logssent = \block_mad2api\mad_dashboard::api_send_logs($record->courseid);
+
+      if (!$studentssent || !$logssent) {
+        mtrace("Failed to send all data for course #" . $record->courseid . ". Keeping status as wip.\n");
+        continue;
+      }
 
       mtrace("course logs sent \n");
 
       $data = array(
         'id' => $record->id,
-        'course_id' => $record->courseid,
-        'updated_at' => date('Y-m-d H:i:s'),
+        'courseid' => $record->courseid,
+        'updatedat' => date('Y-m-d H:i:s'),
         'status' => 'done'
       );
 

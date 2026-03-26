@@ -89,3 +89,8 @@ $string['studentrole_desc'] = 'Perfil utilizado para identificar os estudantes n
 // classes/task/mad_logger.php
 $string['send_logs_task_name'] = 'Envio de Logs LANSE';
 $string['check_resend_data_task_name'] = 'Verificação de Reenvio de Dados LANSE';
+
+$string['nopermissiondashboard'] = 'Você não tem permissão para acessar o painel LANSE deste curso.';
+$string['dashboardnotenabled'] = 'O monitoramento está desabilitado para este curso.';
+$string['mad2api:viewdashboard'] = 'Visualizar painel LANSE';
+$string['mad2api:managemonitoring'] = 'Gerenciar monitoramento LANSE';

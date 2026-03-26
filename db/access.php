@@ -69,7 +69,28 @@ $capabilities = array(
             'editingteacher' => CAP_ALLOW,
             'manager'        => CAP_ALLOW,
         ],
-        // Herdável por papéis no curso.
         'clonepermissionsfrom' => 'moodle/course:view',
+    ],
+
+    'block/mad2api:viewdashboard' => [
+        'captype'      => 'read',
+        'contextlevel' => CONTEXT_COURSE,
+        'archetypes'   => [
+            'teacher'        => CAP_ALLOW,
+            'editingteacher' => CAP_ALLOW,
+            'manager'        => CAP_ALLOW,
+        ],
+        'clonepermissionsfrom' => 'block/mad2api:view',
+    ],
+
+    'block/mad2api:managemonitoring' => [
+        'captype'      => 'write',
+        'contextlevel' => CONTEXT_COURSE,
+        'archetypes'   => [
+            'teacher'        => CAP_ALLOW,
+            'editingteacher' => CAP_ALLOW,
+            'manager'        => CAP_ALLOW,
+        ],
+        'clonepermissionsfrom' => 'moodle/course:update',
     ],
 );

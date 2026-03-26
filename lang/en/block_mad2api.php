@@ -31,6 +31,11 @@ $string['mad2api:addinstance'] = 'Add LANSE block';
 $string['mad2api:myaddinstance'] = 'Add LANSE block to my moodle';
 $string['mad2api:context_course'] = 'Use LANSE in course context';
 $string['mad2api:view'] = 'View LANSE dashboard';
+
+$string['mad2api:viewdashboard'] = 'View LANSE dashboard page';
+$string['mad2api:managemonitoring'] = 'Enable or disable LANSE course monitoring';
+$string['nopermissiondashboard'] = 'You do not have permission to access the LANSE dashboard for this course.';
+$string['nopermissionmonitoring'] = 'You do not have permission to manage LANSE monitoring for this course.';
 $string['pluginname'] = 'Dashboard LANSE';
 $string['error_modal_title'] = 'Error on enabling course';
 $string['access_dashboard'] = 'Access dashboard';
@@ -89,3 +94,8 @@ $string['studentrole_desc'] = 'Perfil utilizado para identificar os estudantes n
 // classes/task/mad_logger.php
 $string['send_logs_task_name'] = 'Envio de Logs LANSE';
 $string['check_resend_data_task_name'] = 'Verificação de Reenvio de Dados LANSE';
+
+$string['nopermissiondashboard'] = 'You do not have permission to access the LANSE dashboard for this course.';
+$string['dashboardnotenabled'] = 'Course monitoring is disabled for this course.';
+$string['mad2api:viewdashboard'] = 'View LANSE dashboard';
+$string['mad2api:managemonitoring'] = 'Manage LANSE monitoring';
