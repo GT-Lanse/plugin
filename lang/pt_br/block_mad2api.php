@@ -94,3 +94,12 @@ $string['nopermissiondashboard'] = 'Você não tem permissão para acessar o pai
 $string['dashboardnotenabled'] = 'O monitoramento está desabilitado para este curso.';
 $string['mad2api:viewdashboard'] = 'Visualizar painel LANSE';
 $string['mad2api:managemonitoring'] = 'Gerenciar monitoramento LANSE';
+
+$string['confirm_enable_title'] = 'Habilitar monitoramento';
+$string['confirm_enable_body'] = 'Tem certeza de que deseja habilitar o monitoramento do curso? Os dados podem levar até 24 horas para serem totalmente disponíveis no painel.';
+
+$string['confirm_disable_title'] = 'Desabilitar monitoramento';
+$string['confirm_disable_body'] = 'Tem certeza de que deseja desabilitar o monitoramento do curso? Todos os dados históricos permanecerão disponíveis, mas o painel não será atualizado até que o monitoramento seja habilitado novamente.';
+
+$string['confirm'] = 'Confirmar';
+$string['cancel'] = 'Cancelar';

@@ -1,3 +1,51 @@
 .block_mad2api a.disabled {
   display: none;
 }
+
+.block_mad2api .lanse-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.block_mad2api .lanse-modal-content {
+  background: #F8F9FA;
+  padding: 20px;
+  border-radius: 12px;
+  width: 320px;
+  text-align: center;
+}
+
+.block_mad2api .lanse-modal-content h3 {
+  color: #1D3557;
+  margin-bottom: 10px;
+}
+
+.block_mad2api .lanse-modal-content p {
+  color: #343A40;
+}
+
+.block_mad2api .lanse-modal-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.block_mad2api .lanse-primary {
+  background-color: #2A9D8F;
+  color: white;
+}
+
+.block_mad2api .lanse-modal .btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}

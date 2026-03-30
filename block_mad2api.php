@@ -133,7 +133,6 @@ class block_mad2api extends block_base {
             )
         );
 
-
         $actions[] = html_writer::tag(
             'a',
             get_string('open_dashboard', 'block_mad2api'),
