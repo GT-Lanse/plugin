@@ -318,6 +318,14 @@ class mad_dashboard extends external_api {
                 continue;
             }
 
+            $dashsettings = $DB->get_record('block_mad2api_dash_settings', ['courseid' => (int)$coursemodule->course, 'isenabled' => 1]);
+
+            if (empty($dashsettings)) {
+                mtrace("Monitoring disabled for course #{$coursemodule->course}, skipping activity #{$activity->contextInstanceId} \n");
+
+                continue;
+            }
+
             $tablename = strtolower($activity->type);
 
             mtrace("Searching on table {{$tablename}} for activity #{$coursemodule->instance} \n");
