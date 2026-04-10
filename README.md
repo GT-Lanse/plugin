@@ -75,5 +75,3 @@ O plugin implementa os provedores da **Moodle Privacy API** para exportação e 
 ## 🔐 Permissões
 
 - `block/mad2api:addinstance` – adicionar o bloco a cursos.  
-- `block/mad2api:myaddinstance` – adicionar ao *Painel do Usuário*.  
-- `block/mad2api:view` – visualizar e usar o bloco.

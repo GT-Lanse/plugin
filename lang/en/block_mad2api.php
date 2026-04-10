@@ -28,9 +28,7 @@ $string['descfoo'] = 'Config description';
 $string['headerconfig'] = 'Config section header';
 $string['labelfoo'] = 'Config label';
 $string['mad2api:addinstance'] = 'Add LANSE block';
-$string['mad2api:myaddinstance'] = 'Add LANSE block to my moodle';
 $string['mad2api:context_course'] = 'Use LANSE in course context';
-$string['mad2api:view'] = 'View LANSE dashboard';
 
 $string['mad2api:viewdashboard'] = 'View LANSE dashboard page';
 $string['mad2api:managemonitoring'] = 'Enable or disable LANSE course monitoring';
@@ -95,10 +93,7 @@ $string['studentrole_desc'] = 'Perfil utilizado para identificar os estudantes n
 $string['send_logs_task_name'] = 'Envio de Logs LANSE';
 $string['check_resend_data_task_name'] = 'Verificação de Reenvio de Dados LANSE';
 
-$string['nopermissiondashboard'] = 'You do not have permission to access the LANSE dashboard for this course.';
 $string['dashboardnotenabled'] = 'Course monitoring is disabled for this course.';
-$string['mad2api:viewdashboard'] = 'View LANSE dashboard';
-$string['mad2api:managemonitoring'] = 'Manage LANSE monitoring';
 
 $string['confirm_enable_title'] = 'Enable monitoring';
 $string['confirm_enable_body'] = 'Are you sure you want to enable course monitoring? The data could take up to 24 hours to be fully available on the dashboard.';

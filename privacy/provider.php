@@ -54,11 +54,11 @@ class provider implements
     public static function get_metadata(collection $items): collection {
         $items->add_database_table('block_mad2api_course_logs', [
             'courseid'   => 'privacy:metadata:course_logs:courseid',
-            'userid'     => 'privacy:metadata:course_logs:userid',
-            'action'     => 'privacy:metadata:course_logs:action',
-            'payload'    => 'privacy:metadata:course_logs:payload',
             'status'     => 'privacy:metadata:course_logs:status',
+            'studentssent'    => 'privacy:metadata:course_logs:studentssent',
+            'lastlogpage'    => 'privacy:metadata:course_logs:lastlogpage',
             'createdat'  => 'privacy:metadata:course_logs:createdat',
+            'updatedat'  => 'privacy:metadata:course_logs:updatedat',
         ], 'privacy:metadata:course_logs');
 
         $items->add_external_location_link('mad2api_external_service', [

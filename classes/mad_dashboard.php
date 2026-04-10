@@ -547,7 +547,12 @@ class mad_dashboard extends external_api {
      * @return object|null The response data from the API or null on failure.
     */
     public static function api_check_pending_activities() {
-        return self::do_get_request('api/v3/activities/pending_information');
+        try {
+            return self::do_get_request('api/v3/activities/pending_information');
+        } catch (\Exception $e) {
+            mtrace("Error checking pending activities: " . $e->getMessage() . "\n");
+            return null;
+        }
     }
 
     /**
@@ -609,6 +614,7 @@ class mad_dashboard extends external_api {
         global $DB, $USER;
 
         $courseid = (int)$courseid;
+        $success = true;
 
         $courselog = $DB->get_record('block_mad2api_course_logs', [
             'courseid' => $courseid,
@@ -678,7 +684,11 @@ class mad_dashboard extends external_api {
                     $log->gradable    = $gradable ? 1 : 0;
                     $log->activityurl = $activityurlout;
 
-                    $other = json_decode($log->other, true) ?: [];
+                    $other = json_decode($log->other, true);
+                    if (!is_array($other)) {
+                        $other = [];
+                    }
+
                     $other['gradable'] = $log->gradable;
                     $other['url']      = $log->activityurl;
                     $log->other        = json_encode($other);
@@ -690,14 +700,25 @@ class mad_dashboard extends external_api {
                 $logs[$id] = $log;
             }
 
-            $data = ['logs' => $logs];
+            $data = [
+                'logs' => array_values(array_map(function($log) {
+                    return (array)$log;
+                }, $logs))
+            ];
 
-            $response = self::do_post_request("api/v2/courses/{$courseid}/logs/batch", $data, $courseid);
+            try {
+                $response = self::do_post_request("api/v2/courses/{$courseid}/logs/batch", $data, $courseid);
 
-            if (!empty($response->error)) {
-                mtrace("Erro ao enviar logs (página {$currentpage}): " . json_encode($response) . "\n");
+                if (!empty($response->error)) {
+                    mtrace("Erro ao enviar logs (página {$currentpage}): " . json_encode($response) . "\n");
+                    $success = false;
+                    break;
+                }
 
-                return false;
+            } catch (\Exception $e) {
+                mtrace("Erro ao enviar logs (página {$currentpage}): " . $e->getMessage() . "\n");
+                $success = false;
+                break;
             }
 
             if ($courselog) {
@@ -711,14 +732,23 @@ class mad_dashboard extends external_api {
             }
         }
 
-        if ($courselog) {
+        if (!$success) {
+            return false;
+        }
+
+        try {
+            self::send_original_course_logs($courseid);
+            self::send_grades($courseid);
+        } catch (\Exception $e) {
+            mtrace("Erro nas etapas finais: " . $e->getMessage() . "\n");
+            return false;
+        }
+
+        if ($courselog && $success) {
             $courselog->status    = 'done';
             $courselog->updatedat = date('Y-m-d H:i:s');
             $DB->update_record('block_mad2api_course_logs', $courselog, false);
         }
-
-        self::send_original_course_logs($courseid);
-        self::send_grades($courseid);
 
         mtrace("Envio de logs concluído para curso {$courseid}.\n");
 

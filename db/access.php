@@ -25,16 +25,6 @@
 defined('MOODLE_INTERNAL') || die();
 
 $capabilities = array(
-    'block/mad2api:myaddinstance' => array(
-        'captype' => 'write',
-        'contextlevel' => CONTEXT_SYSTEM,
-        'archetypes' => array(
-            'user' => CAP_ALLOW
-        ),
-
-        'clonepermissionsfrom' => 'moodle/my:manageblocks'
-    ),
-
     'block/mad2api:context_course' => array(
         'riskbitmask' => RISK_SPAM | RISK_XSS,
 
@@ -60,17 +50,6 @@ $capabilities = array(
 
         'clonepermissionsfrom' => 'moodle/site:manageblocks'
     ),
-
-    'block/mad2api:view' => [
-        'captype'      => 'read',
-        'contextlevel' => CONTEXT_COURSE,
-        'archetypes'   => [
-            'teacher'        => CAP_ALLOW,
-            'editingteacher' => CAP_ALLOW,
-            'manager'        => CAP_ALLOW,
-        ],
-        'clonepermissionsfrom' => 'moodle/course:view',
-    ],
 
     'block/mad2api:viewdashboard' => [
         'captype'      => 'read',
