@@ -96,7 +96,7 @@ $string['check_resend_data_task_name'] = 'Verificação de Reenvio de Dados LANS
 $string['dashboardnotenabled'] = 'Course monitoring is disabled for this course.';
 
 $string['confirm_enable_title'] = 'Enable monitoring';
-$string['confirm_enable_body'] = 'Are you sure you want to enable course monitoring? The data could take up to 24 hours to be fully available on the dashboard.';
+$string['confirm_enable_body'] = 'Are you sure you want to enable course monitoring? The course data will be sent to our external platform and could take up to 24 hours to be fully available on the dashboard.';
 
 $string['confirm_disable_title'] = 'Disable monitoring';
 $string['confirm_disable_body'] = 'Are you sure you want to disable course monitoring?';

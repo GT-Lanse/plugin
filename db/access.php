@@ -58,8 +58,7 @@ $capabilities = array(
             'teacher'        => CAP_ALLOW,
             'editingteacher' => CAP_ALLOW,
             'manager'        => CAP_ALLOW,
-        ],
-        'clonepermissionsfrom' => 'block/mad2api:view',
+        ]
     ],
 
     'block/mad2api:managemonitoring' => [

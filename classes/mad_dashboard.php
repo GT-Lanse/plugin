@@ -709,9 +709,7 @@ class mad_dashboard extends external_api {
             }
 
             $data = [
-                'logs' => array_values(array_map(function($log) {
-                    return (array)$log;
-                }, $logs))
+                'logs' => json_decode(json_encode($logs), true)
             ];
 
             try {
