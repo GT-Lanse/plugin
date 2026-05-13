@@ -631,10 +631,27 @@ class mad_dashboard extends external_api {
 
         if ($courselog) {
             mtrace("Logs para o curso {$courseid} já foram enviados anteriormente.\n");
+
             return true;
         }
 
         $courselog = $DB->get_record('block_mad2api_course_logs', ['courseid' => $courseid]);
+
+        if (!$courselog) {
+            $courselog = new \stdClass();
+            $courselog->courseid = $courseid;
+            $courselog->status = 'processing';
+            $courselog->lastlogpage = 1;
+            $courselog->createdat = date('Y-m-d H:i:s');
+            $courselog->updatedat = date('Y-m-d H:i:s');
+
+            $courselog->id = $DB->insert_record('block_mad2api_course_logs', $courselog);
+        } else {
+            $courselog->status = 'processing';
+            $courselog->updatedat = date('Y-m-d H:i:s');
+
+            $DB->update_record('block_mad2api_course_logs', $courselog, false);
+        }
 
         $count = $DB->count_records('logstore_standard_log', ['courseid' => $courseid]);
         $perpage = 100;
@@ -642,12 +659,11 @@ class mad_dashboard extends external_api {
 
         mtrace("Enviando {$count} logs para o curso {$courseid} ({$endpage} páginas)\n");
 
-        $startpage = (!empty($courselog) && !empty($courselog->lastlogpage))
+        $startpage = (!empty($courselog->lastlogpage))
             ? (int)$courselog->lastlogpage
             : 1;
 
         for ($currentpage = $startpage; $currentpage <= $endpage; $currentpage++) {
-
             $offset = ($currentpage - 1) * $perpage;
 
             $logs = $DB->get_records_sql("
@@ -693,6 +709,7 @@ class mad_dashboard extends external_api {
                     $log->activityurl = $activityurlout;
 
                     $other = json_decode($log->other, true);
+
                     if (!is_array($other)) {
                         $other = [];
                     }
@@ -715,50 +732,124 @@ class mad_dashboard extends external_api {
             try {
                 $response = self::do_post_request("api/v2/courses/{$courseid}/logs/batch", $data, $courseid);
 
-                if (!empty($response->error)) {
+                if (!self::api_response_is_successful($response)) {
                     mtrace("Erro ao enviar logs (página {$currentpage}): " . json_encode($response) . "\n");
+
                     $success = false;
+
                     break;
                 }
-
             } catch (\Exception $e) {
                 mtrace("Erro ao enviar logs (página {$currentpage}): " . $e->getMessage() . "\n");
+
                 $success = false;
+
                 break;
             }
 
-            if ($courselog) {
-                $updatedattributes = [
-                    'id'          => $courselog->id,
-                    'lastlogpage' => $currentpage + 1,
-                    'updatedat'   => date('Y-m-d H:i:s')
-                ];
-                $DB->update_record('block_mad2api_course_logs', $updatedattributes, false);
-                $courselog->lastlogpage = $currentpage + 1;
-            }
-        }
-
-        if (!$success) {
-            return false;
-        }
-
-        try {
-            self::send_original_course_logs($courseid);
-            self::send_grades($courseid);
-        } catch (\Exception $e) {
-            mtrace("Erro nas etapas finais: " . $e->getMessage() . "\n");
-            return false;
-        }
-
-        if ($courselog && $success) {
-            $courselog->status    = 'done';
+            $courselog->lastlogpage = $currentpage + 1;
             $courselog->updatedat = date('Y-m-d H:i:s');
             $DB->update_record('block_mad2api_course_logs', $courselog, false);
         }
 
+        if (!$success) {
+            $courselog->status = 'error';
+            $courselog->updatedat = date('Y-m-d H:i:s');
+            $DB->update_record('block_mad2api_course_logs', $courselog, false);
+
+            return false;
+        }
+
+        try {
+            $originalcourselogsresponse = self::send_original_course_logs($courseid);
+
+            if (!self::api_response_is_successful($originalcourselogsresponse)) {
+                mtrace("Erro ao enviar logs originais: " . json_encode($originalcourselogsresponse) . "\n");
+
+                $success = false;
+            }
+
+            if ($success) {
+                $gradesresponse = self::send_grades($courseid);
+
+                if (!self::api_response_is_successful($gradesresponse)) {
+                    mtrace("Erro ao enviar notas: " . json_encode($gradesresponse) . "\n");
+
+                    $success = false;
+                }
+            }
+        } catch (\Exception $e) {
+            mtrace("Erro nas etapas finais: " . $e->getMessage() . "\n");
+
+            $success = false;
+        }
+
+        if (!$success) {
+            $courselog->status = 'error';
+            $courselog->updatedat = date('Y-m-d H:i:s');
+
+            $DB->update_record('block_mad2api_course_logs', $courselog, false);
+
+            return false;
+        }
+
+        $courselog->status = 'done';
+        $courselog->updatedat = date('Y-m-d H:i:s');
+
+        $DB->update_record('block_mad2api_course_logs', $courselog, false);
+
         mtrace("Envio de logs concluído para curso {$courseid}.\n");
 
         return true;
+    }
+
+    /**
+     * Checks whether an API response indicates a successful request.
+     * @param mixed $response The response returned by the API request.
+     * @return bool True if the response is successful, false otherwise.
+    */
+    private static function api_response_is_successful($response): bool {
+        if ($response === true) {
+            return true;
+        }
+
+        if ($response === false || $response === null) {
+            return false;
+        }
+
+        if (is_object($response)) {
+            if (!empty($response->error)) {
+                return false;
+            }
+
+            if (isset($response->success) && !$response->success) {
+                return false;
+            }
+
+            if (isset($response->status) && in_array($response->status, ['error', 'failed'], true)) {
+                return false;
+            }
+
+            return true;
+        }
+
+        if (is_array($response)) {
+            if (!empty($response['error'])) {
+                return false;
+            }
+
+            if (isset($response['success']) && !$response['success']) {
+                return false;
+            }
+
+            if (isset($response['status']) && in_array($response['status'], ['error', 'failed'], true)) {
+                return false;
+            }
+
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -1343,33 +1434,6 @@ class mad_dashboard extends external_api {
     }
 
     /**
-     * Disables a course in the local database if the external API returns a 400 or 404 status code.
-     * @param resource $ch The cURL handle.
-     * @param int $courseid The ID of the course to potentially disable.
-     * @return void
-    */
-    private static function disable_course_if_not_found($ch, $courseid) {
-        global $DB;
-
-        $httpstatus = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-        if (in_array((int)$httpstatus, [400, 404], true)) {
-            $resources = $DB->get_records(
-                'block_mad2api_dash_settings', ['courseid' => (int)$courseid, 'isenabled' => 1]
-            );
-
-            foreach ($resources as $resource) {
-                $data = [
-                    'id'         => $resource->id,
-                    'isenabled'  => 0
-                ];
-
-                $DB->update_record('block_mad2api_dash_settings', $data, false);
-            }
-        }
-    }
-
-    /**
      * Converts a string to camelCase based on a specified delimiter.
      * @param string $str The input string to convert.
      * @param string $delim The delimiter used to split the string.
@@ -1418,10 +1482,6 @@ class mad_dashboard extends external_api {
         $response = curl_exec($ch);
         $curlerror = curl_error($ch);
         $httpstatus = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-        if ($courseid !== null) {
-            self::disable_course_if_not_found($ch, (int)$courseid);
-        }
 
         curl_close($ch);
 

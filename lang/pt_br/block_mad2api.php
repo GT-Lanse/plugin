@@ -43,23 +43,23 @@ $string['error_modal_body'] = "
 ";
 $string['error_alert_body'] = 'Por favor, verifique se o curso que você está tentando habilitar possui as datas de início e término configuradas corretamente. Se o problema persistir, entre em contato conosco em: suporte.lanse@gmail.com. Obrigado!';
 
-$string['privacy:metadata:course_logs'] = 'Registros gerados pelo bloco para auditar interações com a API por usuário/curso.';
-$string['privacy:metadata:course_logs:courseid'] = 'ID do curso relacionado ao registro.';
-$string['privacy:metadata:course_logs:userid'] = 'ID do usuário que originou o evento/exportação.';
-$string['privacy:metadata:course_logs:action'] = 'Ação realizada pela integração (ex.: habilitar, desabilitar, exportar).';
-$string['privacy:metadata:course_logs:payload'] = 'Conteúdo enviado/recebido na chamada à API (pode conter dados pessoais).';
-$string['privacy:metadata:course_logs:status'] = 'Status/resposta do processamento da API.';
-$string['privacy:metadata:course_logs:createdat'] = 'Data/hora de criação do registro.';
+$string['privacy:metadata:course_logs'] = 'Logs de processamento de cursos enviados via API.';
+$string['privacy:metadata:course_logs:courseid'] = 'O ID do curso cujos dados foram processados.';
+$string['privacy:metadata:course_logs:status'] = 'O status da operação de sincronização.';
+$string['privacy:metadata:course_logs:studentssent'] = 'A lista ou contagem de estudantes enviados para o sistema externo.';
+$string['privacy:metadata:course_logs:lastlogpage'] = 'A última página de logs processada para este curso.';
+$string['privacy:metadata:course_logs:createdat'] = 'A data e hora em que este registro de log foi criado.';
+$string['privacy:metadata:course_logs:updatedat'] = 'A data e hora da última atualização do log.';
 
-$string['privacy:metadata:external'] = 'Este plugin envia dados para um serviço externo (API LANSE / MAD) para prover painéis e análises.';
-$string['privacy:metadata:external:userid'] = 'Identificador do usuário no Moodle.';
-$string['privacy:metadata:external:courseid'] = 'Identificador do curso no Moodle.';
-$string['privacy:metadata:external:fullname'] = 'Nome completo do usuário.';
-$string['privacy:metadata:external:email'] = 'Endereço de e-mail do usuário.';
-$string['privacy:metadata:external:enrolments'] = 'Matrículas do usuário usadas para acesso e permissões no painel externo.';
-$string['privacy:metadata:external:grades'] = 'Informações de notas usadas em análises.';
-$string['privacy:metadata:external:progress'] = 'Informações de progresso/conclusão de atividades.';
-$string['privacy:metadata:external:lastaccess'] = 'Carimbos de última visita usados para indicadores de atividade.';
+$string['privacy:metadata:external'] = 'Dados exportados para um serviço externo via API.';
+$string['privacy:metadata:external:userid'] = 'O identificador do usuário enviado ao sistema externo.';
+$string['privacy:metadata:external:courseid'] = 'O ID do curso associado aos dados enviados.';
+$string['privacy:metadata:external:fullname'] = 'O nome completo do usuário.';
+$string['privacy:metadata:external:email'] = 'O endereço de e-mail do usuário.';
+$string['privacy:metadata:external:enrolments'] = 'Informações sobre as inscrições do usuário.';
+$string['privacy:metadata:external:grades'] = 'As notas obtidas pelo usuário no curso.';
+$string['privacy:metadata:external:progress'] = 'O progresso de conclusão do usuário no curso.';
+$string['privacy:metadata:external:lastaccess'] = 'A data do último acesso do usuário ao curso.';
 
 $string['privacy:export:path'] = 'Dados do bloco MAD2 API';
 
@@ -94,7 +94,7 @@ $string['mad2api:viewdashboard'] = 'Visualizar painel LANSE';
 $string['mad2api:managemonitoring'] = 'Gerenciar monitoramento LANSE';
 
 $string['confirm_enable_title'] = 'Habilitar monitoramento';
-$string['confirm_enable_body'] = 'Tem certeza de que deseja habilitar o monitoramento do curso? Os dados do curso serão enviados para nossa plataforma externa e podem levar até 24 horas para serem totalmente disponíveis no painel.';
+$string['confirm_enable_body'] = 'Tem certeza de que deseja habilitar o monitoramento do curso? Ao habilitar o monitoramento, você concorda que os dados do curso sejam enviados para a plataforma externa LANSE, que opera fora do ambiente do Moodle e é de responsabilidade de outro sistema.';
 
 $string['confirm_disable_title'] = 'Desabilitar monitoramento';
 $string['confirm_disable_body'] = 'Tem certeza de que deseja desabilitar o monitoramento do curso? Todos os dados históricos permanecerão disponíveis, mas o painel não será atualizado até que o monitoramento seja habilitado novamente.';
