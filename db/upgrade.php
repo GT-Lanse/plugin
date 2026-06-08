@@ -250,6 +250,21 @@ function xmldb_block_mad2api_upgrade($oldversion)
     }
   }
 
+  if ($oldversion < 2026060800) {
+    $table = new xmldb_table('block_mad2api_course_logs');
+    $field = new xmldb_field('status', XMLDB_TYPE_CHAR, '20', null, XMLDB_NOTNULL, null, null);
+
+    if ($dbman->table_exists($table)) {
+      if ($dbman->field_exists($table, $field)) {
+        $dbman->change_field_precision($table, $field);
+      }
+
+      $DB->set_field('block_mad2api_course_logs', 'status', 'wip', ['status' => 'processing']);
+    }
+
+    upgrade_block_savepoint(true, 2026060800, 'mad2api');
+  }
+
   if (!!$DB->get_record("block_mad2api_api_settings", array())) {
     return true;
   }

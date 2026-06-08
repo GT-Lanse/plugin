@@ -87,11 +87,19 @@ class mad_dashboard extends external_api {
         $context = \context_course::instance($courseid, MUST_EXIST);
 
         if ($userid > 0) {
+            if (is_siteadmin($userid)) {
+                return true;
+            }
+
             if (!has_capability('block/mad2api:managemonitoring', $context, $userid)) {
                 return false;
             }
 
             return self::user_has_dashboard_role($userid, (int)$context->id);
+        }
+
+        if (is_siteadmin()) {
+            return true;
         }
 
         if (!has_capability('block/mad2api:managemonitoring', $context)) {
@@ -115,11 +123,19 @@ class mad_dashboard extends external_api {
         $context = \context_course::instance($courseid, MUST_EXIST);
 
         if ($userid > 0) {
+            if (is_siteadmin($userid)) {
+                return true;
+            }
+
             if (!has_capability('block/mad2api:viewdashboard', $context, $userid)) {
                 return false;
             }
 
             return self::user_has_dashboard_role($userid, (int)$context->id);
+        }
+
+        if (is_siteadmin()) {
+            return true;
         }
 
         if (!has_capability('block/mad2api:viewdashboard', $context)) {
@@ -170,7 +186,7 @@ class mad_dashboard extends external_api {
         $context = \context_course::instance($course->id);
 
         if (!self::current_user_can_manage_monitoring($courseid, (int)$USER->id)) {
-            throw new \required_capability_exception($context, 'block/mad2api:managemonitoring', 'nopermissions', get_string('nopermissionmonitoring', 'block_mad2api'));
+            throw new \required_capability_exception($context, 'block/mad2api:managemonitoring', 'nopermissionmonitoring', 'block_mad2api');
         }
 
         $dashboardsetting = $DB->get_record('block_mad2api_dash_settings', ['courseid' => $courseid]);
@@ -203,8 +219,10 @@ class mad_dashboard extends external_api {
         if (!empty($dashboardsetting->id)) {
             $recorddatabasesettings['id'] = $dashboardsetting->id;
             $databaseresponse = $DB->update_record('block_mad2api_dash_settings', $recorddatabasesettings, false);
+            $dashboardsettingid = (int)$dashboardsetting->id;
         } else {
-            $databaseresponse = (bool)$DB->insert_record('block_mad2api_dash_settings', $recorddatabasesettings, false);
+            $dashboardsettingid = (int)$DB->insert_record('block_mad2api_dash_settings', $recorddatabasesettings);
+            $databaseresponse = $dashboardsettingid > 0;
         }
 
         $recordcourselog = [
@@ -223,6 +241,14 @@ class mad_dashboard extends external_api {
         } else {
             $recordcourselog['id'] = $courselog->id;
             $DB->update_record('block_mad2api_course_logs', $recordcourselog, false);
+        }
+
+        if ($databaseresponse) {
+            \block_mad2api\event\monitoring_enabled::create([
+                'context' => $context,
+                'courseid' => $courseid,
+                'objectid' => $dashboardsettingid,
+            ])->trigger();
         }
 
         return [['enabled' => $databaseresponse, 'url' => $response->url, 'error' => false]];
@@ -268,7 +294,7 @@ class mad_dashboard extends external_api {
         $context = \context_course::instance($course->id);
 
         if (!self::current_user_can_manage_monitoring($courseid)) {
-            throw new \required_capability_exception($context, 'block/mad2api:managemonitoring', 'nopermissions', get_string('nopermissionmonitoring', 'block_mad2api'));
+            throw new \required_capability_exception($context, 'block/mad2api:managemonitoring', 'nopermissionmonitoring', 'block_mad2api');
         }
 
         $dashboardsetting = $DB->get_record('block_mad2api_dash_settings', ['courseid' => $courseid]);
@@ -284,18 +310,32 @@ class mad_dashboard extends external_api {
             $databaseresponse = $DB->update_record('block_mad2api_dash_settings', $data);
         }
 
+        if ($databaseresponse) {
+            \block_mad2api\event\monitoring_disabled::create([
+                'context' => $context,
+                'courseid' => $courseid,
+                'objectid' => (int)$dashboardsetting->id,
+            ])->trigger();
+        }
+
         return [['disabled' => (bool)$databaseresponse]];
     }
 
     /**
      * Send pending activities names to API.
      *
-     * @return void
+     * @return bool True when pending activities were processed without API errors.
     */
     public static function send_pending_activities() {
         global $DB;
 
         $response = self::api_check_pending_activities();
+
+        if (!self::api_response_is_successful($response)) {
+            mtrace("Error checking pending activities: " . json_encode($response) . "\n");
+
+            return false;
+        }
 
         if (empty($response->data)) {
             mtrace("No pending activities found \n");
@@ -304,6 +344,8 @@ class mad_dashboard extends external_api {
         }
 
         mtrace("Found " . count($response->data) . " pending activities \n");
+
+        $success = true;
 
         foreach ($response->data as $activity) {
             if (empty($activity->contextInstanceId)) {
@@ -340,8 +382,14 @@ class mad_dashboard extends external_api {
 
             mtrace("Sending activity name {$instance->name} for {$activity->name}\n");
 
-            self::send_activity_name((int)$activity->moodleId, (int)$activity->contextId, $instance->name);
+            if (!self::send_activity_name((int)$activity->moodleId, (int)$activity->contextId, $instance->name)) {
+                mtrace("Error sending activity name for activity #{$activity->contextInstanceId}\n");
+
+                $success = false;
+            }
         }
+
+        return $success;
     }
 
     /**
@@ -349,10 +397,18 @@ class mad_dashboard extends external_api {
      * @param int $courseid The ID of the course.
      * @param int $contextid The context ID of the activity.
      * @param string $name The name of the activity.
-     * @return void
+     * @return bool True when the activity name was sent successfully.
     */
     public static function send_activity_name($courseid, $contextid, $name) {
-        self::do_put_request("api/v3/courses/{$courseid}/activities/{$contextid}", ['name' => $name]);
+        $response = self::do_put_request("api/v3/courses/{$courseid}/activities/{$contextid}", ['name' => $name]);
+
+        if (!self::api_response_is_successful($response)) {
+            mtrace("Error sending activity name to API: " . json_encode($response) . "\n");
+
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -382,10 +438,22 @@ class mad_dashboard extends external_api {
 
         $response = self::api_check_course_data((int)$courseid);
 
+        if (!self::api_response_is_successful($response)) {
+            mtrace("Error checking resend data for course #{$courseid}: " . json_encode($response) . "\n");
+
+            return;
+        }
+
         if ($response && !empty($response->resend_data)) {
             mtrace("Resend data enabled for course #{$courseid} \n");
 
-            self::api_enable_call((int)$courseid);
+            $enableresponse = self::api_enable_call((int)$courseid);
+
+            if (empty($enableresponse)) {
+                mtrace("Error resending course #{$courseid} data to API. Course log was not changed.\n");
+
+                return;
+            }
 
             $updatedattributes = [
                 'id'            => $courselog->id,
@@ -455,9 +523,9 @@ class mad_dashboard extends external_api {
     }
 
     /**
-     * Sends organization settings to API
-     * @return void
-    */
+     * Sends organization settings to API.
+     * @return bool True when settings are already current or were sent successfully.
+     */
     private static function send_settings_to_api() {
         global $DB, $CFG;
 
@@ -465,7 +533,20 @@ class mad_dashboard extends external_api {
         $apisetting = $apisettings ? array_values($apisettings)[0] : null;
 
         if (!$apisetting || (substr((string)$apisetting->sentat, 0, 10) === date('Y-m-d'))) {
-            return;
+            return true;
+        }
+
+        $settings = [
+            'pluginVersion'  => \core_plugin_manager::instance()->get_plugin_info('block_mad2api')->release,
+            'moodleVersion'  => $CFG->release,
+        ];
+
+        $response = self::do_put_request('api/v2/settings/organizations/', $settings);
+
+        if (!self::api_response_is_successful($response)) {
+            mtrace("Error sending organization settings to API: " . json_encode($response) . "\n");
+
+            return false;
         }
 
         $updatedattributes = [
@@ -475,12 +556,7 @@ class mad_dashboard extends external_api {
         ];
         $DB->update_record('block_mad2api_api_settings', $updatedattributes, false);
 
-        $settings = [
-            'pluginVersion'  => \core_plugin_manager::instance()->get_plugin_info('block_mad2api')->release,
-            'moodleVersion'  => $CFG->release,
-        ];
-
-        self::do_put_request('api/v2/settings/organizations/', $settings);
+        return true;
     }
 
     /**
@@ -496,7 +572,11 @@ class mad_dashboard extends external_api {
             'installationDate'=> date('Y-m-d H:i:s')
         ];
 
-        self::do_put_request('api/v2/settings/organizations/', $settings);
+        $response = self::do_put_request('api/v2/settings/organizations/', $settings);
+
+        if (!self::api_response_is_successful($response)) {
+            mtrace("Error sending plugin installation data to API: " . json_encode($response) . "\n");
+        }
     }
 
 
@@ -533,10 +613,27 @@ class mad_dashboard extends external_api {
             'email'     => $USER->email,
         ];
 
-        self::do_post_request("api/v3/courses/{$courseid}/enable", $enable);
-        self::send_settings_to_api();
+        $enableresponse = self::do_post_request("api/v3/courses/{$courseid}/enable", $enable);
+
+        if (!self::api_response_is_successful($enableresponse)) {
+            mtrace("Error enabling course #{$courseid} in API: " . json_encode($enableresponse) . "\n");
+
+            return null;
+        }
+
+        if (!self::send_settings_to_api()) {
+            mtrace("Error sending settings for course #{$courseid}. Course authorization was not requested.\n");
+
+            return null;
+        }
 
         $resp = self::do_post_request('api/v2/authorize', $auth);
+
+        if (!self::api_response_is_successful($resp)) {
+            mtrace("Error authorizing course #{$courseid} in API: " . json_encode($resp) . "\n");
+
+            return null;
+        }
 
         return $resp->data ?? null;
     }
@@ -616,7 +713,7 @@ class mad_dashboard extends external_api {
     /**
      * Sends the course logs to the external API in batches.
      * @param int $courseid The ID of the course.
-     * @return void
+     * @return bool True when the log pipeline finishes successfully.
     */
     public static function api_send_logs($courseid) {
         global $DB, $USER;
@@ -640,14 +737,14 @@ class mad_dashboard extends external_api {
         if (!$courselog) {
             $courselog = new \stdClass();
             $courselog->courseid = $courseid;
-            $courselog->status = 'processing';
+            $courselog->status = 'wip';
             $courselog->lastlogpage = 1;
             $courselog->createdat = date('Y-m-d H:i:s');
             $courselog->updatedat = date('Y-m-d H:i:s');
 
             $courselog->id = $DB->insert_record('block_mad2api_course_logs', $courselog);
         } else {
-            $courselog->status = 'processing';
+            $courselog->status = 'wip';
             $courselog->updatedat = date('Y-m-d H:i:s');
 
             $DB->update_record('block_mad2api_course_logs', $courselog, false);
@@ -793,11 +890,6 @@ class mad_dashboard extends external_api {
             return false;
         }
 
-        $courselog->status = 'done';
-        $courselog->updatedat = date('Y-m-d H:i:s');
-
-        $DB->update_record('block_mad2api_course_logs', $courselog, false);
-
         mtrace("Envio de logs concluído para curso {$courseid}.\n");
 
         return true;
@@ -855,7 +947,7 @@ class mad_dashboard extends external_api {
     /**
      * Sends the grades of the course students to the external API in batches.
      * @param int $courseid The ID of the course.
-     * @return void
+     * @return bool True when all grade events were sent successfully.
     */
     public static function send_grades($courseid) {
         global $DB, $USER;
@@ -935,17 +1027,31 @@ class mad_dashboard extends external_api {
 
                         $data['raw_data'] = $data;
 
-                        self::do_post_request($url, $data, $courseid);
+                        try {
+                            $response = self::do_post_request($url, $data, $courseid);
+                        } catch (\Exception $e) {
+                            mtrace("Erro ao enviar nota: " . $e->getMessage() . "\n");
+
+                            return false;
+                        }
+
+                        if (!self::api_response_is_successful($response)) {
+                            mtrace("Erro ao enviar nota: " . json_encode($response) . "\n");
+
+                            return false;
+                        }
                     }
                 }
             }
         }
+
+        return true;
     }
 
     /**
      * Sends the original course logs to the external API in batches.
      * @param int $courseid The ID of the course.
-     * @return void
+     * @return bool True when all original course logs were sent successfully.
     */
     public static function send_original_course_logs($courseid) {
         global $DB, $USER;
@@ -1056,11 +1162,21 @@ class mad_dashboard extends external_api {
             $data = ['logs' => $logs];
 
             try {
-                self::do_post_request("api/v2/courses/{$courseid}/logs/batch", $data, $courseid);
+                $response = self::do_post_request("api/v2/courses/{$courseid}/logs/batch", $data, $courseid);
             } catch (\Exception $e) {
                 mtrace("Error sending logs: " . $e->getMessage() . "\n");
+
+                return false;
+            }
+
+            if (!self::api_response_is_successful($response)) {
+                mtrace("Error sending original course logs: " . json_encode($response) . "\n");
+
+                return false;
             }
         }
+
+        return true;
     }
 
     /**

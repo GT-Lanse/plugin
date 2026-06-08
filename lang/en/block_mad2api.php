@@ -36,6 +36,9 @@ $string['nopermissiondashboard'] = 'You do not have permission to access the LAN
 $string['nopermissionmonitoring'] = 'You do not have permission to manage LANSE monitoring for this course.';
 $string['pluginname'] = 'Dashboard LANSE';
 $string['error_modal_title'] = 'Error on enabling course';
+$string['eventdashboardviewed'] = 'LANSE dashboard viewed';
+$string['eventmonitoringdisabled'] = 'LANSE course monitoring disabled';
+$string['eventmonitoringenabled'] = 'LANSE course monitoring enabled';
 $string['access_dashboard'] = 'Access dashboard';
 $string['open_dashboard'] = 'Open LANSE platform';
 $string['enable_dashboard'] = 'Enable course monitoring';
@@ -48,14 +51,6 @@ $string['error_modal_body'] = "
 ";
 $string['error_alert_body'] = 'Please ensure that the course you are trying to enable has start date and end date configured correctly. If the problem persists, please contact us at: suporte.lanse@gmail.com. Thank you!';
 
-$string['privacy:metadata:course_logs'] = 'Records of course processing and synchronization status sent via API.';
-$string['privacy:metadata:course_logs:courseid'] = 'The ID of the course whose data was processed.';
-$string['privacy:metadata:course_logs:status'] = 'The status of the synchronization operation.';
-$string['privacy:metadata:course_logs:studentssent'] = 'Information about the students sent to the external system.';
-$string['privacy:metadata:course_logs:lastlogpage'] = 'The last log page processed for this specific course.';
-$string['privacy:metadata:course_logs:createdat'] = 'The timestamp when this log entry was created.';
-$string['privacy:metadata:course_logs:updatedat'] = 'The timestamp when this log entry was last updated.';
-
 $string['privacy:metadata:external'] = 'Personal data exported to an external service via API.';
 $string['privacy:metadata:external:userid'] = 'The unique identifier of the user sent to the external system.';
 $string['privacy:metadata:external:courseid'] = 'The ID of the course associated with the exported data.';
@@ -65,8 +60,6 @@ $string['privacy:metadata:external:enrolments'] = 'Information regarding the use
 $string['privacy:metadata:external:grades'] = 'The grades obtained by the user in the course.';
 $string['privacy:metadata:external:progress'] = 'The completion progress of the user within the course.';
 $string['privacy:metadata:external:lastaccess'] = 'The timestamp of the user\'s last access to the course.';
-
-$string['privacy:export:path'] = 'MAD2 API block data';
 
 // view.php
 $string['api_contact_error'] = 'Falha ao contatar a API (erro Moodle).';

@@ -46,6 +46,8 @@ class mad_check_resend_data extends \core\task\scheduled_task {
 
     mtrace("Checking pending activities \n");
 
-    \block_mad2api\mad_dashboard::send_pending_activities();
+    if (!\block_mad2api\mad_dashboard::send_pending_activities()) {
+      mtrace("Pending activities check finished with API errors \n");
+    }
   }
 }

@@ -13,7 +13,6 @@ use core_privacy\local\request\contextlist;
 use core_privacy\local\request\approved_contextlist;
 use core_privacy\local\request\userlist;
 use core_privacy\local\request\approved_userlist;
-use core_privacy\local\request\writer;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -35,15 +34,6 @@ class provider implements
      * @return collection The populated metadata collection.
      */
     public static function get_metadata(collection $items): collection {
-        $items->add_database_table('block_mad2api_course_logs', [
-            'courseid'     => 'privacy:metadata:course_logs:courseid',
-            'status'       => 'privacy:metadata:course_logs:status',
-            'studentssent' => 'privacy:metadata:course_logs:studentssent',
-            'lastlogpage'  => 'privacy:metadata:course_logs:lastlogpage',
-            'createdat'    => 'privacy:metadata:course_logs:createdat',
-            'updatedat'    => 'privacy:metadata:course_logs:updatedat',
-        ], 'privacy:metadata:course_logs');
-
         $items->add_external_location_link('mad2api_external_service', [
             'userid'     => 'privacy:metadata:external:userid',
             'courseid'   => 'privacy:metadata:external:courseid',
@@ -64,16 +54,7 @@ class provider implements
      * @return contextlist The list of contexts.
      */
     public static function get_contexts_for_userid(int $userid): contextlist {
-        $contextlist = new contextlist();
-
-        $sql = "SELECT c.id
-                  FROM {context} c
-                  JOIN {course} co ON c.instanceid = co.id AND c.contextlevel = :contextlevel
-                  JOIN {block_mad2api_course_logs} log ON log.courseid = co.id";
-
-        $contextlist->add_from_sql($sql, ['contextlevel' => CONTEXT_COURSE]);
-
-        return $contextlist;
+        return new contextlist();
     }
 
     /**
@@ -82,14 +63,7 @@ class provider implements
      * @return void
      */
     public static function get_users_in_context(userlist $userlist) {
-        $context = $userlist->get_context();
-
-        if ($context->contextlevel != CONTEXT_COURSE) {
-            return;
-        }
-
-        $sql = "SELECT userid FROM {role_assignments} WHERE contextid = :contextid";
-        $userlist->add_from_sql('userid', $sql, ['contextid' => $context->id]);
+        return;
     }
 
     /**
@@ -98,19 +72,7 @@ class provider implements
      * @return void
      */
     public static function export_user_data(approved_contextlist $contextlist) {
-        global $DB;
-
-        foreach ($contextlist as $context) {
-            if ($context->contextlevel != CONTEXT_COURSE) {
-                continue;
-            }
-
-            $logs = $DB->get_records('block_mad2api_course_logs', ['courseid' => $context->instanceid]);
-            if ($logs) {
-                writer::with_context($context)
-                    ->export_data([get_string('pluginname', 'block_mad2api')], (object) $logs);
-            }
-        }
+        return;
     }
 
     /**
@@ -119,11 +81,7 @@ class provider implements
      * @return void
      */
     public static function delete_data_for_all_users_in_context(\context $context) {
-        global $DB;
-
-        if ($context->contextlevel == CONTEXT_COURSE) {
-            $DB->delete_records('block_mad2api_course_logs', ['courseid' => $context->instanceid]);
-        }
+        return;
     }
 
     /**
@@ -132,13 +90,7 @@ class provider implements
      * @return void
      */
     public static function delete_data_for_user(approved_contextlist $contextlist) {
-        global $DB;
-
-        foreach ($contextlist as $context) {
-            if ($context->contextlevel == CONTEXT_COURSE) {
-                $DB->delete_records('block_mad2api_course_logs', ['courseid' => $context->instanceid]);
-            }
-        }
+        return;
     }
 
     /**
@@ -147,11 +99,6 @@ class provider implements
      * @return void
      */
     public static function delete_data_for_users(approved_userlist $userlist) {
-        global $DB;
-
-        $context = $userlist->get_context();
-        if ($context->contextlevel == CONTEXT_COURSE) {
-            $DB->delete_records('block_mad2api_course_logs', ['courseid' => $context->instanceid]);
-        }
+        return;
     }
 }

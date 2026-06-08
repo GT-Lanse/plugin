@@ -75,7 +75,17 @@ class mad_logger extends \core\task\scheduled_task {
       $logssent = \block_mad2api\mad_dashboard::api_send_logs($record->courseid);
 
       if (!$studentssent || !$logssent) {
-        mtrace("Failed to send all data for course #" . $record->courseid . ". Keeping status as wip.\n");
+        mtrace("Failed to send all data for course #" . $record->courseid . ". Updating status to error.\n");
+
+        $data = array(
+          'id' => $record->id,
+          'courseid' => $record->courseid,
+          'updatedat' => date('Y-m-d H:i:s'),
+          'status' => 'error'
+        );
+
+        $DB->update_record('block_mad2api_course_logs', $data);
+
         continue;
       }
 

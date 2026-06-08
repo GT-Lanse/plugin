@@ -35,7 +35,7 @@ require_login($courseid);
 $context = context_course::instance($courseid, MUST_EXIST);
 
 if (!\block_mad2api\mad_dashboard::current_user_can_view_dashboard($courseid)) {
-    throw new required_capability_exception($context, 'block/mad2api:viewdashboard', '', get_string('nopermissiondashboard', 'block_mad2api'));
+    throw new required_capability_exception($context, 'block/mad2api:viewdashboard', 'nopermissiondashboard', 'block_mad2api');
 }
 
 $course = get_course($courseid);
@@ -132,6 +132,15 @@ if (empty($token)) {
 
     exit;
 }
+
+\block_mad2api\event\dashboard_viewed::create([
+    'context' => $context,
+    'courseid' => $courseid,
+    'other' => [
+        'api_course_id' => $apicourseid,
+        'organization_id' => $organizationid,
+    ],
+])->trigger();
 
 echo $OUTPUT->header();
 

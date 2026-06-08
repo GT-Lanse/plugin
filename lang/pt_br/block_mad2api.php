@@ -31,6 +31,9 @@ $string['mad2api:addinstance'] = 'Adicionar LANSE';
 $string['mad2api:context_course'] = 'Usar LANSE no contexto do curso';
 $string['pluginname'] = 'Painel LANSE';
 $string['error_modal_title'] = 'Erro ao habilitar curso';
+$string['eventdashboardviewed'] = 'Painel LANSE visualizado';
+$string['eventmonitoringdisabled'] = 'Monitoramento LANSE do curso desabilitado';
+$string['eventmonitoringenabled'] = 'Monitoramento LANSE do curso habilitado';
 $string['access_dashboard'] = 'Acessar painel';
 $string['open_dashboard'] = 'Acessar plataforma LANSE';
 $string['enable_dashboard'] = 'Habilitar monitoramento do curso';
@@ -43,14 +46,6 @@ $string['error_modal_body'] = "
 ";
 $string['error_alert_body'] = 'Por favor, verifique se o curso que você está tentando habilitar possui as datas de início e término configuradas corretamente. Se o problema persistir, entre em contato conosco em: suporte.lanse@gmail.com. Obrigado!';
 
-$string['privacy:metadata:course_logs'] = 'Logs de processamento de cursos enviados via API.';
-$string['privacy:metadata:course_logs:courseid'] = 'O ID do curso cujos dados foram processados.';
-$string['privacy:metadata:course_logs:status'] = 'O status da operação de sincronização.';
-$string['privacy:metadata:course_logs:studentssent'] = 'A lista ou contagem de estudantes enviados para o sistema externo.';
-$string['privacy:metadata:course_logs:lastlogpage'] = 'A última página de logs processada para este curso.';
-$string['privacy:metadata:course_logs:createdat'] = 'A data e hora em que este registro de log foi criado.';
-$string['privacy:metadata:course_logs:updatedat'] = 'A data e hora da última atualização do log.';
-
 $string['privacy:metadata:external'] = 'Dados exportados para um serviço externo via API.';
 $string['privacy:metadata:external:userid'] = 'O identificador do usuário enviado ao sistema externo.';
 $string['privacy:metadata:external:courseid'] = 'O ID do curso associado aos dados enviados.';
@@ -60,8 +55,6 @@ $string['privacy:metadata:external:enrolments'] = 'Informações sobre as inscri
 $string['privacy:metadata:external:grades'] = 'As notas obtidas pelo usuário no curso.';
 $string['privacy:metadata:external:progress'] = 'O progresso de conclusão do usuário no curso.';
 $string['privacy:metadata:external:lastaccess'] = 'A data do último acesso do usuário ao curso.';
-
-$string['privacy:export:path'] = 'Dados do bloco MAD2 API';
 
 // view.php
 $string['api_contact_error'] = 'Falha ao contatar a API (erro Moodle).';
@@ -89,6 +82,7 @@ $string['send_logs_task_name'] = 'Envio de Logs LANSE';
 $string['check_resend_data_task_name'] = 'Verificação de Reenvio de Dados LANSE';
 
 $string['nopermissiondashboard'] = 'Você não tem permissão para acessar o painel LANSE deste curso.';
+$string['nopermissionmonitoring'] = 'Você não tem permissão para gerenciar o monitoramento LANSE deste curso.';
 $string['dashboardnotenabled'] = 'O monitoramento está desabilitado para este curso.';
 $string['mad2api:viewdashboard'] = 'Visualizar painel LANSE';
 $string['mad2api:managemonitoring'] = 'Gerenciar monitoramento LANSE';

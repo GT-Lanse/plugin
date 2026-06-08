@@ -36,7 +36,7 @@
         <FIELD NAME="createdat" TYPE="char" LENGTH="50" NOTNULL="true" SEQUENCE="false"/>
         <FIELD NAME="updatedat" TYPE="char" LENGTH="50" NOTNULL="true" SEQUENCE="false"/>
         <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
-        <FIELD NAME="status" TYPE="char" LENGTH="4" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="status" TYPE="char" LENGTH="20" NOTNULL="true" SEQUENCE="false"/>
 
         <FIELD NAME="studentssent" TYPE="int" LENGTH="1" NOTNULL="false" SEQUENCE="false" DEFAULT="0"/>
         <FIELD NAME="lastlogpage" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" DEFAULT="1"/>

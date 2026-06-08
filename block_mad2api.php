@@ -75,6 +75,137 @@ class block_mad2api extends block_base {
     }
 
     /**
+     * Disable course monitoring when the last LANSE block is removed from a course.
+     *
+     * @return bool
+     */
+    public function instance_delete() {
+        $courseid = $this->get_courseid_from_instance();
+
+        if (empty($courseid) || $this->course_has_other_instances((int)$courseid)) {
+            return true;
+        }
+
+        $this->disable_monitoring_for_deleted_instance((int)$courseid);
+
+        return true;
+    }
+
+    /**
+     * Resolve the course ID related to the current block instance.
+     *
+     * @return int|null
+     */
+    private function get_courseid_from_instance() {
+        global $DB;
+
+        if (empty($this->instance) || empty($this->instance->parentcontextid)) {
+            return null;
+        }
+
+        $context = context::instance_by_id((int)$this->instance->parentcontextid, IGNORE_MISSING);
+
+        if (!$context) {
+            return null;
+        }
+
+        if ((int)$context->contextlevel === CONTEXT_COURSE) {
+            return (int)$context->instanceid;
+        }
+
+        if ((int)$context->contextlevel === CONTEXT_MODULE) {
+            $coursemodule = $DB->get_record(
+                'course_modules',
+                ['id' => (int)$context->instanceid],
+                'course',
+                IGNORE_MISSING
+            );
+
+            return $coursemodule ? (int)$coursemodule->course : null;
+        }
+
+        return null;
+    }
+
+    /**
+     * Check whether another LANSE block instance still exists in the course.
+     *
+     * @param int $courseid
+     * @return bool
+     */
+    private function course_has_other_instances($courseid) {
+        global $DB;
+
+        $instanceid = !empty($this->instance->id) ? (int)$this->instance->id : 0;
+
+        $sql = "
+            SELECT COUNT(1)
+              FROM {block_instances} bi
+              JOIN {context} ctx ON ctx.id = bi.parentcontextid
+         LEFT JOIN {course_modules} cm
+                ON cm.id = ctx.instanceid AND ctx.contextlevel = :modulecontextjoin
+             WHERE bi.blockname = :blockname
+               AND bi.id <> :instanceid
+               AND (
+                    (ctx.contextlevel = :coursecontext AND ctx.instanceid = :courseid)
+                    OR (ctx.contextlevel = :modulecontextwhere AND cm.course = :modulecourseid)
+               )
+        ";
+
+        return $DB->count_records_sql($sql, [
+            'modulecontextjoin' => CONTEXT_MODULE,
+            'blockname' => 'mad2api',
+            'instanceid' => $instanceid,
+            'coursecontext' => CONTEXT_COURSE,
+            'courseid' => (int)$courseid,
+            'modulecontextwhere' => CONTEXT_MODULE,
+            'modulecourseid' => (int)$courseid,
+        ]) > 0;
+    }
+
+    /**
+     * Disable local course monitoring and register the Moodle log event.
+     *
+     * @param int $courseid
+     * @return void
+     */
+    private function disable_monitoring_for_deleted_instance($courseid) {
+        global $DB;
+
+        $dashboardsetting = $DB->get_record('block_mad2api_dash_settings', [
+            'courseid' => (int)$courseid,
+            'isenabled' => 1,
+        ]);
+
+        if (empty($dashboardsetting->id)) {
+            return;
+        }
+
+        $updated = $DB->update_record('block_mad2api_dash_settings', [
+            'id' => $dashboardsetting->id,
+            'courseid' => (int)$courseid,
+            'updatedat' => date('Y-m-d H:i:s'),
+            'isenabled' => 0,
+        ]);
+
+        if (!$updated) {
+            return;
+        }
+
+        $context = context_course::instance((int)$courseid, IGNORE_MISSING);
+
+        if (!$context) {
+            return;
+        }
+
+        \block_mad2api\event\monitoring_disabled::create([
+            'context' => $context,
+            'courseid' => (int)$courseid,
+            'objectid' => (int)$dashboardsetting->id,
+        ])->trigger();
+    }
+
+    /**
      * Builds the block content.
      *
      * @return stdClass|null
