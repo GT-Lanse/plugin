@@ -24,8 +24,7 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-function xmldb_block_mad2api_upgrade($oldversion)
-{
+function xmldb_block_mad2api_upgrade($oldversion) {
   global $CFG, $DB;
 
   $dbman = $DB->get_manager();

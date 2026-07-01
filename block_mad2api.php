@@ -192,6 +192,8 @@ class block_mad2api extends block_base {
             return;
         }
 
+        \block_mad2api\mad_dashboard::mark_course_log_disabled((int)$courseid);
+
         $context = context_course::instance((int)$courseid, IGNORE_MISSING);
 
         if (!$context) {
@@ -254,7 +256,6 @@ class block_mad2api extends block_base {
             $ltiurl,
             get_string('access_dashboard', 'block_mad2api'),
             array(
-                'class' => 'btn btr-primary',
                 'id'    => 'lti-lanse',
                 'class' => 'plugin-link btn' . (!$enabled ? ' disabled' : ''),
                 'style' => 'width:100%;margin-top:10px;background-color:#04626a;color:#fff;'
@@ -267,7 +268,6 @@ class block_mad2api extends block_base {
             array(
                 'id'    => 'access-dashboard',
                 'href'  => $appurl,
-                'class' => 'plugin-link btn',
                 'class' => 'plugin-link btn' . (!$enabled ? ' disabled' : ''),
                 'style' => 'width:100%;margin:10px 0;color:#04626a;border:3px solid #04626a;',
                 'target' => '_blank'

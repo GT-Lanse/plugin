@@ -27,27 +27,27 @@ namespace block_mad2api\task;
 defined('MOODLE_INTERNAL') || die();
 
 class mad_check_resend_data extends \core\task\scheduled_task {
-  public function get_name() {
-    return get_string('check_resend_data_task_name', 'block_mad2api');
-  }
-
-  public function execute() {
-    global $DB;
-
-    $records = $DB->get_records('block_mad2api_dash_settings', ['isenabled' => 1]);
-
-    mtrace("Checking resend data for " . count($records) . " courses \n");
-
-    foreach ($records as $record) {
-      mtrace("Checking resend for course #" . $record->courseid . "\n");
-
-      \block_mad2api\mad_dashboard::check_data_on_api($record->courseid);
+    public function get_name() {
+        return get_string('check_resend_data_task_name', 'block_mad2api');
     }
 
-    mtrace("Checking pending activities \n");
+    public function execute() {
+        global $DB;
 
-    if (!\block_mad2api\mad_dashboard::send_pending_activities()) {
-      mtrace("Pending activities check finished with API errors \n");
+        $records = $DB->get_records('block_mad2api_dash_settings', ['isenabled' => 1]);
+
+        mtrace("Checking resend data for " . count($records) . " courses \n");
+
+        foreach ($records as $record) {
+            mtrace("Checking resend for course #" . $record->courseid . "\n");
+
+            \block_mad2api\mad_dashboard::check_data_on_api($record->courseid);
+        }
+
+        mtrace("Checking pending activities \n");
+
+        if (!\block_mad2api\mad_dashboard::send_pending_activities()) {
+            mtrace("Pending activities check finished with API errors \n");
+        }
     }
-  }
 }

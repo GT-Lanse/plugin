@@ -25,22 +25,22 @@
 defined('MOODLE_INTERNAL') || die();
 
 $functions = array(
-  'block_mad2api_enable_course' => array(
-    'classpath' => '',
-    'classname'   => 'block_mad2api\mad_dashboard',
-    'methodname'  => 'enable_course',
-    'description' => 'Enabling into the API the course monitoring.',
-    'type'        => 'write',
-    'ajax'        => true,
-    'services'    => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
-  ),
-  'block_mad2api_disable_course' => array(
-    'classpath' => '',
-    'classname'   => 'block_mad2api\mad_dashboard',
-    'methodname'  => 'disable_course',
-    'description' => 'Disabling into the API the course monitoring.',
-    'type'        => 'write',
-    'ajax'        => true,
-    'services'    => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
-  )
+    'block_mad2api_enable_course' => array(
+        'classpath' => '',
+        'classname'   => 'block_mad2api\mad_dashboard',
+        'methodname'  => 'enable_course',
+        'description' => 'Enabling into the API the course monitoring.',
+        'type'        => 'write',
+        'ajax'        => true,
+        'services'    => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
+    ),
+    'block_mad2api_disable_course' => array(
+        'classpath' => '',
+        'classname'   => 'block_mad2api\mad_dashboard',
+        'methodname'  => 'disable_course',
+        'description' => 'Disabling into the API the course monitoring.',
+        'type'        => 'write',
+        'ajax'        => true,
+        'services'    => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
+    )
 );

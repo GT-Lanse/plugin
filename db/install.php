@@ -24,15 +24,14 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-function xmldb_block_mad2api_install()
-{
-  global $DB;
+function xmldb_block_mad2api_install() {
+    global $DB;
 
-  $params = array(
-    'createdat' => date('Y-m-d H:i:s'),
-    'updatedat' => date('Y-m-d H:i:s'),
-    'sentat' => date('Y-m-d H:i:s')
-  );
+    $params = array(
+        'createdat' => date('Y-m-d H:i:s'),
+        'updatedat' => date('Y-m-d H:i:s'),
+        'sentat' => date('Y-m-d H:i:s')
+    );
 
-  $DB->insert_record('block_mad2api_api_settings', $params, false);
+    $DB->insert_record('block_mad2api_api_settings', $params, false);
 }

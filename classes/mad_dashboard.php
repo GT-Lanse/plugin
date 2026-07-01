@@ -311,6 +311,8 @@ class mad_dashboard extends external_api {
         }
 
         if ($databaseresponse) {
+            self::mark_course_log_disabled($courseid);
+
             \block_mad2api\event\monitoring_disabled::create([
                 'context' => $context,
                 'courseid' => $courseid,
@@ -319,6 +321,29 @@ class mad_dashboard extends external_api {
         }
 
         return [['disabled' => (bool)$databaseresponse]];
+    }
+
+    /**
+     * Marks the course log record as disabled so scheduled log sending ignores it.
+     *
+     * @param int $courseid The course ID.
+     * @return bool True when no log exists or the log was updated successfully.
+     */
+    public static function mark_course_log_disabled($courseid) {
+        global $DB;
+
+        $courselog = $DB->get_record('block_mad2api_course_logs', ['courseid' => (int)$courseid]);
+
+        if (empty($courselog->id)) {
+            return true;
+        }
+
+        return (bool)$DB->update_record('block_mad2api_course_logs', [
+            'id' => $courselog->id,
+            'courseid' => (int)$courseid,
+            'updatedat' => date('Y-m-d H:i:s'),
+            'status' => 'disabled',
+        ]);
     }
 
     /**
@@ -427,8 +452,15 @@ class mad_dashboard extends external_api {
             return;
         }
 
-        $lastlogs = array_slice($DB->get_records('block_mad2api_course_logs', ['courseid' => $courseid, 'status' => 'done']), -1);
-        $courselog = !empty($lastlogs) ? $lastlogs[0] : null;
+        $lastlogs = $DB->get_records(
+            'block_mad2api_course_logs',
+            ['courseid' => $courseid],
+            'id DESC',
+            '*',
+            0,
+            1
+        );
+        $courselog = $lastlogs ? reset($lastlogs) : null;
 
         if (!$courselog) {
             mtrace("Course log not found for course #{$courseid} \n");
@@ -1341,7 +1373,7 @@ class mad_dashboard extends external_api {
 
         $students = $DB->get_records_sql($sql, $params, $offset, $perpage);
 
-        return self::camelizeArray($students);
+        return self::camelize_array($students);
     }
 
     /**
@@ -1383,7 +1415,7 @@ class mad_dashboard extends external_api {
 
         $student = $DB->get_record_sql($sql, $params);
 
-        return self::camelizeObject($student);
+        return self::camelize_object($student);
     }
 
     /**
@@ -1435,7 +1467,7 @@ class mad_dashboard extends external_api {
 
         $user = $DB->get_record_sql($sql, $params);
 
-        return self::camelizeObject($user);
+        return self::camelize_object($user);
     }
 
     /**
@@ -1509,7 +1541,7 @@ class mad_dashboard extends external_api {
      * @param object|array $obj The object or associative array to convert.
      * @return array The new associative array with camelCase keys.
     */
-    public static function camelizeObject($obj) {
+    public static function camelize_object($obj) {
         $newobj = [];
 
         if (gettype($obj) === 'boolean' || $obj === null) {
@@ -1517,7 +1549,7 @@ class mad_dashboard extends external_api {
         }
 
         foreach ($obj as $key => $value) {
-            $newobj[self::convertToCamel($key, '_')] = $value;
+            $newobj[self::convert_to_camel($key, '_')] = $value;
         }
 
         return $newobj;
@@ -1528,11 +1560,11 @@ class mad_dashboard extends external_api {
      * @param array $array The array of objects to convert.
      * @return array The new array with camelCase keys.
     */
-    public static function camelizeArray($array) {
+    public static function camelize_array($array) {
         $formattedarray = [];
 
         foreach ($array as $item) {
-            $formattedarray[] = self::camelizeObject($item);
+            $formattedarray[] = self::camelize_object($item);
         }
 
         return $formattedarray;
@@ -1555,7 +1587,7 @@ class mad_dashboard extends external_api {
      * @param string $delim The delimiter used to split the string.
      * @return string The converted camelCase string.
     */
-    private static function convertToCamel($str, $delim) {
+    private static function convert_to_camel($str, $delim) {
         $parts = explode($delim, (string)$str);
         $parts = array_map('ucwords', $parts);
 

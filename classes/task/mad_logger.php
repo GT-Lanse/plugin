@@ -29,78 +29,85 @@ defined('MOODLE_INTERNAL') || die();
  * An example of a scheduled task.
  */
 class mad_logger extends \core\task\scheduled_task {
-  /**
-   * Return the task's name as shown in admin screens.
-   *
-   * @return string
-   */
-  public function get_name() {
-    return get_string('send_logs_task_name', 'block_mad2api');
-  }
+    /**
+     * Return the task's name as shown in admin screens.
+     *
+     * @return string
+     */
+    public function get_name() {
+        return get_string('send_logs_task_name', 'block_mad2api');
+    }
 
-  /**
-   * Execute the task.
-   */
-  public function execute() {
-    global $DB, $CFG;
+    /**
+     * Execute the task.
+     */
+    public function execute() {
+        global $DB, $CFG;
 
-    $records = $DB->get_records_select(
-      'block_mad2api_course_logs',
-      "status = 'todo' OR status = 'wip'"
-    );
-
-    foreach ($records as $record) {
-      if (!\block_mad2api\mad_dashboard::is_course_enabled((int)$record->courseid)) {
-        mtrace("Skipping course #" . $record->courseid . " because monitoring is disabled.\n");
-        continue;
-      }
-
-      $data = array(
-        'id' => $record->id,
-        'courseid' => $record->courseid,
-        'updatedat' => date('Y-m-d H:i:s'),
-        'status' => 'wip'
-      );
-
-      mtrace("Sending data from course #" . $record->courseid . "\n");
-
-      $DB->update_record('block_mad2api_course_logs', $data);
-
-      mtrace("course log updated to wip \n");
-
-      mtrace("sending students \n");
-      $studentssent = \block_mad2api\mad_dashboard::api_send_students($record->courseid);
-
-      mtrace("sending logs \n");
-      $logssent = \block_mad2api\mad_dashboard::api_send_logs($record->courseid);
-
-      if (!$studentssent || !$logssent) {
-        mtrace("Failed to send all data for course #" . $record->courseid . ". Updating status to error.\n");
-
-        $data = array(
-          'id' => $record->id,
-          'courseid' => $record->courseid,
-          'updatedat' => date('Y-m-d H:i:s'),
-          'status' => 'error'
+        list($statussql, $statusparams) = $DB->get_in_or_equal(
+            ['todo', 'wip', 'error'],
+            SQL_PARAMS_NAMED,
+            'status'
         );
 
-        $DB->update_record('block_mad2api_course_logs', $data);
+        $records = $DB->get_records_select(
+            'block_mad2api_course_logs',
+            "status {$statussql}",
+            $statusparams
+        );
 
-        continue;
-      }
+        foreach ($records as $record) {
+            if (!\block_mad2api\mad_dashboard::is_course_enabled((int)$record->courseid)) {
+                mtrace("Skipping course #" . $record->courseid . " because monitoring is disabled.\n");
+                continue;
+            }
 
-      mtrace("course logs sent \n");
+            $data = array(
+                'id' => $record->id,
+                'courseid' => $record->courseid,
+                'updatedat' => date('Y-m-d H:i:s'),
+                'status' => 'wip'
+            );
 
-      $data = array(
-        'id' => $record->id,
-        'courseid' => $record->courseid,
-        'updatedat' => date('Y-m-d H:i:s'),
-        'status' => 'done'
-      );
+            mtrace("Sending data from course #" . $record->courseid . "\n");
 
-      $DB->update_record('block_mad2api_course_logs', $data);
+            $DB->update_record('block_mad2api_course_logs', $data);
 
-      mtrace("course log updated to done \n");
+            mtrace("course log updated to wip \n");
+
+            mtrace("sending students \n");
+            $studentssent = \block_mad2api\mad_dashboard::api_send_students($record->courseid);
+
+            mtrace("sending logs \n");
+            $logssent = \block_mad2api\mad_dashboard::api_send_logs($record->courseid);
+
+            if (!$studentssent || !$logssent) {
+                mtrace("Failed to send all data for course #" . $record->courseid . ". Updating status to error.\n");
+
+                $data = array(
+                    'id' => $record->id,
+                    'courseid' => $record->courseid,
+                    'updatedat' => date('Y-m-d H:i:s'),
+                    'status' => 'error'
+                );
+
+                $DB->update_record('block_mad2api_course_logs', $data);
+
+                continue;
+            }
+
+            mtrace("course logs sent \n");
+
+            $data = array(
+                'id' => $record->id,
+                'courseid' => $record->courseid,
+                'updatedat' => date('Y-m-d H:i:s'),
+                'status' => 'done'
+            );
+
+            $DB->update_record('block_mad2api_course_logs', $data);
+
+            mtrace("course log updated to done \n");
+        }
     }
-  }
 }

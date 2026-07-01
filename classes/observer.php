@@ -24,7 +24,7 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once('mad_dashboard.php');
+require_once(__DIR__ . '/mad_dashboard.php');
 require_once($CFG->libdir . '/gradelib.php');
 require_once($CFG->libdir . '/weblib.php');
 
@@ -88,7 +88,7 @@ class block_mad2api_observer {
             'moodle_user_id' => $event->userid,
             'other' => $other,
             'context_id' => $event->contextid,
-            'raw_data' => \block_mad2api\mad_dashboard::camelizeObject($event),
+            'raw_data' => \block_mad2api\mad_dashboard::camelize_object($event),
             'time_created' => $event->timecreated,
         ];
 
@@ -130,7 +130,7 @@ class block_mad2api_observer {
             'moodle_user_id' => $event->userid,
             'other' => $other,
             'context_id' => $event->contextid,
-            'raw_data' => \block_mad2api\mad_dashboard::camelizeObject($event),
+            'raw_data' => \block_mad2api\mad_dashboard::camelize_object($event),
             'time_created' => $event->timecreated,
         ];
 
@@ -170,7 +170,7 @@ class block_mad2api_observer {
             'moodleRelatedUserId' => $event->relateduserid,
             'moodleUserId' => $event->userid,
             'contextId' => $event->contextid,
-            'rawData' => \block_mad2api\mad_dashboard::camelizeObject($event),
+            'rawData' => \block_mad2api\mad_dashboard::camelize_object($event),
             'timeCreated' => $event->timecreated,
             'other' => $otherdata,
         ];
@@ -201,7 +201,7 @@ class block_mad2api_observer {
             'moodleRelatedUserId' => $event->relateduserid,
             'moodleUserId' => $event->userid,
             'contextId' => $event->contextid,
-            'rawData' => \block_mad2api\mad_dashboard::camelizeObject($event),
+            'rawData' => \block_mad2api\mad_dashboard::camelize_object($event),
             'timeCreated' => $event->timecreated,
             'other' => \block_mad2api\mad_dashboard::get_user(
                 $event->relateduserid, $course->id
