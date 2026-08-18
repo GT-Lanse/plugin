@@ -197,13 +197,41 @@ class mad_dashboard extends external_api {
      * @throws \moodle_exception If there is an error during the process.
     */
     public static function enable_course($courseid) {
-        global $DB, $USER;
-
         $params = self::validate_parameters(self::enable_course_parameters(), ['courseid' => $courseid]);
         $courseid = (int)$params['courseid'];
         $course = get_course($courseid);
         $context = \context_course::instance($course->id);
         self::validate_context($context);
+
+        return self::enable_course_internal($courseid, $context);
+    }
+
+    /**
+     * Enables the dashboard while the course page is being rendered.
+     *
+     * The course page has already validated its context, so this entry point
+     * must not call external_api::validate_context().
+     *
+     * @param int $courseid The ID of the course to enable the dashboard for.
+     * @return array An array containing the status of the operation and the URL if successful.
+     */
+    public static function enable_course_from_course_view($courseid) {
+        $courseid = (int)$courseid;
+        $course = get_course($courseid);
+        $context = \context_course::instance($course->id);
+
+        return self::enable_course_internal($courseid, $context);
+    }
+
+    /**
+     * Performs the shared course-enabling operation.
+     *
+     * @param int $courseid The ID of the course to enable the dashboard for.
+     * @param \context_course $context The course context.
+     * @return array An array containing the status of the operation and the URL if successful.
+     */
+    private static function enable_course_internal($courseid, \context_course $context) {
+        global $DB, $USER;
 
         if (!self::current_user_can_manage_monitoring($courseid, (int)$USER->id)) {
             throw new \required_capability_exception($context, 'block/mad2api:managemonitoring', 'nopermissionmonitoring', 'block_mad2api');

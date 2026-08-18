@@ -247,7 +247,7 @@ class block_mad2api extends block_base {
 
         if ($enabled) {
             \block_mad2api\mad_dashboard::check_data_on_api($COURSE->id);
-            \block_mad2api\mad_dashboard::enable_course($COURSE->id);
+            \block_mad2api\mad_dashboard::enable_course_from_course_view($COURSE->id);
         }
 
         $actions = array();
