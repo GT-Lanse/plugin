@@ -24,8 +24,8 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2026063000;
-$plugin->release = 'v3.0.2';
+$plugin->version   = 2026081800;
+$plugin->release = 'v3.0.3';
 $plugin->requires  = 2012112900;
 $plugin->component = 'block_mad2api';
 $plugin->maturity  = MATURITY_STABLE;
