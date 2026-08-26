@@ -39,9 +39,24 @@ class block_mad2api_observer {
     /**
      * Sends the event to the mad2 API.
      *
+     * Observers run while Moodle renders the page that triggered the event, so
+     * every callback delegates to a guarded implementation: an API or data
+     * problem is logged and the page keeps working.
+     *
      * @param \core\event\base $event
      */
     public static function new_event(\core\event\base $event) {
+        \block_mad2api\mad_dashboard::guard(function () use ($event) {
+            self::send_event($event);
+        }, 'observer new_event ' . $event->eventname);
+    }
+
+    /**
+     * Builds and sends the event payload.
+     *
+     * @param \core\event\base $event
+     */
+    private static function send_event(\core\event\base $event) {
         global $DB, $USER;
 
         $courseid = $event->courseid;
@@ -101,6 +116,17 @@ class block_mad2api_observer {
      * @param \core\event\base $event
      */
     public static function new_grade(\core\event\base $event) {
+        \block_mad2api\mad_dashboard::guard(function () use ($event) {
+            self::send_grade_event($event);
+        }, 'observer new_grade ' . $event->eventname);
+    }
+
+    /**
+     * Builds and sends the grade event payload.
+     *
+     * @param \core\event\base $event
+     */
+    private static function send_grade_event(\core\event\base $event) {
         global $DB, $USER;
 
         $courseid = $event->courseid;
@@ -143,6 +169,17 @@ class block_mad2api_observer {
      * @param \core\event\base $event
      */
     public static function new_user_enrolment_created(\core\event\base $event) {
+        \block_mad2api\mad_dashboard::guard(function () use ($event) {
+            self::send_user_enrolment_event($event);
+        }, 'observer new_user_enrolment_created ' . $event->eventname);
+    }
+
+    /**
+     * Builds and sends the enrolment event payload.
+     *
+     * @param \core\event\base $event
+     */
+    private static function send_user_enrolment_event(\core\event\base $event) {
         global $USER;
 
         $courseid = $event->courseid;
@@ -184,6 +221,17 @@ class block_mad2api_observer {
      * @param \core\event\base $event
      */
     public static function user_updated(\core\event\base $event) {
+        \block_mad2api\mad_dashboard::guard(function () use ($event) {
+            self::send_user_updated_event($event);
+        }, 'observer user_updated ' . $event->eventname);
+    }
+
+    /**
+     * Builds and sends the updated user payload.
+     *
+     * @param \core\event\base $event
+     */
+    private static function send_user_updated_event(\core\event\base $event) {
         $course = \block_mad2api\mad_dashboard::enrolled_monitored_courses($event->relateduserid);
 
         if (!isset($course)) {

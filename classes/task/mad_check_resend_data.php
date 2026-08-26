@@ -41,7 +41,10 @@ class mad_check_resend_data extends \core\task\scheduled_task {
         foreach ($records as $record) {
             mtrace("Checking resend for course #" . $record->courseid . "\n");
 
-            \block_mad2api\mad_dashboard::check_data_on_api($record->courseid);
+            // One failing course must not abort the run for the remaining ones.
+            \block_mad2api\mad_dashboard::guard(function () use ($record) {
+                \block_mad2api\mad_dashboard::check_data_on_api((int)$record->courseid);
+            }, 'mad_check_resend_data for course #' . (int)$record->courseid);
         }
 
         mtrace("Checking pending activities \n");
