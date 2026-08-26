@@ -62,7 +62,10 @@ $apikey = new admin_setting_configtext(
 $apikey->set_updatedcallback(function () {
     require_once(__DIR__ . '/classes/mad_dashboard.php');
 
-    \block_mad2api\mad_dashboard::api_installation_call();
+    // Saving the API key must succeed even when the API cannot be reached.
+    \block_mad2api\mad_dashboard::guard(function () {
+        \block_mad2api\mad_dashboard::api_installation_call();
+    }, 'apikey updated callback');
 
     return true;
 });

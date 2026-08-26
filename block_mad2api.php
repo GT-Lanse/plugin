@@ -246,8 +246,12 @@ class block_mad2api extends block_base {
         ));
 
         if ($enabled) {
-            \block_mad2api\mad_dashboard::check_data_on_api($COURSE->id);
-            \block_mad2api\mad_dashboard::enable_course_from_course_view($COURSE->id);
+            // The block must render even when the external API is down or slow,
+            // so both calls are guarded and only logged on failure.
+            \block_mad2api\mad_dashboard::guard(function () use ($COURSE) {
+                \block_mad2api\mad_dashboard::check_data_on_api((int)$COURSE->id);
+                \block_mad2api\mad_dashboard::enable_course_from_course_view((int)$COURSE->id);
+            }, 'block get_content for course #' . (int)$COURSE->id);
         }
 
         $actions = array();

@@ -43,12 +43,33 @@ use external_value;
  */
 class mad_dashboard extends external_api {
 
+    /** @var int Seconds allowed to establish a connection during a web request. */
+    const WEB_CONNECT_TIMEOUT = 5;
+
+    /** @var int Seconds allowed for a whole request during a web request. */
+    const WEB_TIMEOUT = 15;
+
+    /** @var int Seconds allowed to establish a connection from CLI/cron. */
+    const CLI_CONNECT_TIMEOUT = 10;
+
+    /** @var int Seconds allowed for a whole request from CLI/cron. */
+    const CLI_TIMEOUT = 120;
+
     public function __construct() {}
+
+    /**
+     * Whether the current request is a CLI script (cron, upgrade, unit tests).
+     *
+     * @return bool
+     */
+    private static function is_cli() {
+        return defined('CLI_SCRIPT') && CLI_SCRIPT;
+    }
 
     /**
      * Logs diagnostic information without corrupting web service responses.
      *
-     * mtrace() writes directly to the output stream, which is appropriate for
+     * self::trace() writes directly to the output stream, which is appropriate for
      * CLI tasks but makes AJAX responses invalid JSON when this class is called
      * from a web request.
      *
@@ -56,12 +77,40 @@ class mad_dashboard extends external_api {
      * @return void
      */
     private static function trace($message) {
-        if (defined('CLI_SCRIPT') && CLI_SCRIPT) {
+        if (self::is_cli()) {
             mtrace($message);
             return;
         }
 
         error_log('[block_mad2api] ' . rtrim($message));
+    }
+
+    /**
+     * Runs a callback and turns any failure into a log entry.
+     *
+     * Communication with the external API happens while course pages render and
+     * while Moodle dispatches events. A failure there must degrade the block,
+     * never the page hosting it, so nothing is allowed to bubble up.
+     *
+     * @param callable $callback Work to run.
+     * @param string $description Short context used in the log message.
+     * @param mixed $fallback Value returned when the callback fails.
+     * @return mixed The callback result, or $fallback when it failed.
+     */
+    public static function guard(callable $callback, $description, $fallback = null) {
+        try {
+            return $callback();
+        } catch (\Throwable $e) {
+            self::trace(sprintf(
+                '%s failed: %s (%s:%d)',
+                $description,
+                $e->getMessage(),
+                $e->getFile(),
+                $e->getLine()
+            ));
+
+            return $fallback;
+        }
     }
 
     /**
@@ -216,11 +265,13 @@ class mad_dashboard extends external_api {
      * @return array An array containing the status of the operation and the URL if successful.
      */
     public static function enable_course_from_course_view($courseid) {
-        $courseid = (int)$courseid;
-        $course = get_course($courseid);
-        $context = \context_course::instance($course->id);
+        return self::guard(function () use ($courseid) {
+            $courseid = (int)$courseid;
+            $course = get_course($courseid);
+            $context = \context_course::instance($course->id);
 
-        return self::enable_course_internal($courseid, $context);
+            return self::enable_course_internal($courseid, $context);
+        }, 'enable_course_from_course_view for course #' . (int)$courseid, [['enabled' => false, 'url' => '', 'error' => true]]);
     }
 
     /**
@@ -401,23 +452,34 @@ class mad_dashboard extends external_api {
      * @return bool True when pending activities were processed without API errors.
     */
     public static function send_pending_activities() {
+        return self::guard(function () {
+            return self::process_pending_activities();
+        }, 'send_pending_activities', false);
+    }
+
+    /**
+     * Sends the names of the activities the API is still missing.
+     *
+     * @return bool True when pending activities were processed without API errors.
+    */
+    private static function process_pending_activities() {
         global $DB;
 
         $response = self::api_check_pending_activities();
 
         if (!self::api_response_is_successful($response)) {
-            mtrace("Error checking pending activities: " . json_encode($response) . "\n");
+            self::trace("Error checking pending activities: " . json_encode($response) . "\n");
 
             return false;
         }
 
         if (empty($response->data)) {
-            mtrace("No pending activities found \n");
+            self::trace("No pending activities found \n");
 
             return true;
         }
 
-        mtrace("Found " . count($response->data) . " pending activities \n");
+        self::trace("Found " . count($response->data) . " pending activities \n");
 
         $success = true;
 
@@ -429,7 +491,7 @@ class mad_dashboard extends external_api {
             $coursemodule = $DB->get_record('course_modules', ['id' => (int)$activity->contextInstanceId]);
 
             if (empty($coursemodule) || empty($coursemodule->instance)) {
-                mtrace("Course module not found for activity #{$activity->contextInstanceId} \n");
+                self::trace("Course module not found for activity #{$activity->contextInstanceId} \n");
 
                 continue;
             }
@@ -437,27 +499,27 @@ class mad_dashboard extends external_api {
             $dashsettings = $DB->get_record('block_mad2api_dash_settings', ['courseid' => (int)$coursemodule->course, 'isenabled' => 1]);
 
             if (empty($dashsettings)) {
-                mtrace("Monitoring disabled for course #{$coursemodule->course}, skipping activity #{$activity->contextInstanceId} \n");
+                self::trace("Monitoring disabled for course #{$coursemodule->course}, skipping activity #{$activity->contextInstanceId} \n");
 
                 continue;
             }
 
             $tablename = strtolower($activity->type);
 
-            mtrace("Searching on table {{$tablename}} for activity #{$coursemodule->instance} \n");
+            self::trace("Searching on table {{$tablename}} for activity #{$coursemodule->instance} \n");
 
             $instance = $DB->get_record($tablename, ['id' => (int)$coursemodule->instance]);
 
             if (empty($instance)) {
-                mtrace("Instance not found for activity #{$activity->contextInstanceId} \n");
+                self::trace("Instance not found for activity #{$activity->contextInstanceId} \n");
 
                 continue;
             }
 
-            mtrace("Sending activity name {$instance->name} for {$activity->name}\n");
+            self::trace("Sending activity name {$instance->name} for {$activity->name}\n");
 
             if (!self::send_activity_name((int)$activity->moodleId, (int)$activity->contextId, $instance->name)) {
-                mtrace("Error sending activity name for activity #{$activity->contextInstanceId}\n");
+                self::trace("Error sending activity name for activity #{$activity->contextInstanceId}\n");
 
                 $success = false;
             }
@@ -477,7 +539,7 @@ class mad_dashboard extends external_api {
         $response = self::do_put_request("api/v3/courses/{$courseid}/activities/{$contextid}", ['name' => $name]);
 
         if (!self::api_response_is_successful($response)) {
-            mtrace("Error sending activity name to API: " . json_encode($response) . "\n");
+            self::trace("Error sending activity name to API: " . json_encode($response) . "\n");
 
             return false;
         }
@@ -492,12 +554,22 @@ class mad_dashboard extends external_api {
      * @return void
     */
     public static function check_data_on_api($courseid) {
+        self::guard(function () use ($courseid) {
+            self::resend_course_data_if_needed((int)$courseid);
+        }, 'check_data_on_api for course #' . (int)$courseid);
+    }
+
+    /**
+     * Asks the API whether the course data must be resent and reschedules it.
+     *
+     * @param int $courseid The ID of the course to check.
+     * @return void
+    */
+    private static function resend_course_data_if_needed($courseid) {
         global $DB;
 
-        $courseid = (int)$courseid;
-
         if (!self::is_course_enabled($courseid)) {
-            mtrace("Course #{$courseid} monitoring is disabled. Skipping resend check.\n");
+            self::trace("Course #{$courseid} monitoring is disabled. Skipping resend check.\n");
             return;
         }
 
@@ -512,7 +584,7 @@ class mad_dashboard extends external_api {
         $courselog = $lastlogs ? reset($lastlogs) : null;
 
         if (!$courselog) {
-            mtrace("Course log not found for course #{$courseid} \n");
+            self::trace("Course log not found for course #{$courseid} \n");
 
             return;
         }
@@ -520,18 +592,18 @@ class mad_dashboard extends external_api {
         $response = self::api_check_course_data((int)$courseid);
 
         if (!self::api_response_is_successful($response)) {
-            mtrace("Error checking resend data for course #{$courseid}: " . json_encode($response) . "\n");
+            self::trace("Error checking resend data for course #{$courseid}: " . json_encode($response) . "\n");
 
             return;
         }
 
         if ($response && !empty($response->resend_data)) {
-            mtrace("Resend data enabled for course #{$courseid} \n");
+            self::trace("Resend data enabled for course #{$courseid} \n");
 
             $enableresponse = self::api_enable_call((int)$courseid);
 
             if (empty($enableresponse)) {
-                mtrace("Error resending course #{$courseid} data to API. Course log was not changed.\n");
+                self::trace("Error resending course #{$courseid} data to API. Course log was not changed.\n");
 
                 return;
             }
@@ -618,7 +690,7 @@ class mad_dashboard extends external_api {
         }
 
         $settings = [
-            'pluginVersion'  => \core_plugin_manager::instance()->get_plugin_info('block_mad2api')->release,
+            'pluginVersion'  => self::plugin_release(),
             'moodleVersion'  => $CFG->release,
         ];
 
@@ -641,14 +713,29 @@ class mad_dashboard extends external_api {
     }
 
     /**
-     * Sends plugin installation data to API
+     * Sends plugin installation data to API.
+     *
+     * Called from the admin settings page and from db/upgrade.php, so an API
+     * failure must never interrupt saving settings or upgrading the site.
+     *
      * @return void
     */
     public static function api_installation_call() {
+        self::guard(function () {
+            self::send_installation_data();
+        }, 'api_installation_call');
+    }
+
+    /**
+     * Performs the installation call against the API.
+     *
+     * @return void
+    */
+    private static function send_installation_data() {
         global $CFG;
 
         $settings = [
-            'pluginVersion'   => \core_plugin_manager::instance()->get_plugin_info('block_mad2api')->release,
+            'pluginVersion'   => self::plugin_release(),
             'moodleVersion'   => $CFG->release,
             'installationDate'=> date('Y-m-d H:i:s')
         ];
@@ -669,6 +756,18 @@ class mad_dashboard extends external_api {
      * @throws \moodle_exception If there is an error during the process.
     */
     public static function api_enable_call($courseid) {
+        return self::guard(function () use ($courseid) {
+            return self::enable_course_in_api((int)$courseid);
+        }, 'api_enable_call for course #' . (int)$courseid);
+    }
+
+    /**
+     * Performs the course-enabling calls against the external API.
+     *
+     * @param int $courseid The ID of the course to enable.
+     * @return object|null The response data from the API or null on failure.
+    */
+    private static function enable_course_in_api($courseid) {
         global $USER, $DB;
 
         $courseid = (int)$courseid;
@@ -725,7 +824,9 @@ class mad_dashboard extends external_api {
      * @return object|null The response data from the API or null on failure.
     */
     public static function api_check_course_data($courseid) {
-        return self::do_get_request("api/v2/plugin/courses/{$courseid}/resend_data");
+        return self::guard(function () use ($courseid) {
+            return self::do_get_request("api/v2/plugin/courses/{$courseid}/resend_data");
+        }, 'api_check_course_data for course #' . (int)$courseid);
     }
 
     /**
@@ -733,12 +834,9 @@ class mad_dashboard extends external_api {
      * @return object|null The response data from the API or null on failure.
     */
     public static function api_check_pending_activities() {
-        try {
+        return self::guard(function () {
             return self::do_get_request('api/v3/activities/pending_information');
-        } catch (\Exception $e) {
-            self::trace("Error checking pending activities: " . $e->getMessage() . "\n");
-            return null;
-        }
+        }, 'api_check_pending_activities');
     }
 
     /**
@@ -747,9 +845,19 @@ class mad_dashboard extends external_api {
      * @return void
     */
     public static function api_send_students($courseid) {
-        global $DB, $USER;
+        return self::guard(function () use ($courseid) {
+            return self::send_students_to_api((int)$courseid);
+        }, 'api_send_students for course #' . (int)$courseid, false);
+    }
 
-        $courseid = (int)$courseid;
+    /**
+     * Sends the enrolled students to the external API in batches.
+     *
+     * @param int $courseid The ID of the course.
+     * @return bool True when every batch was accepted.
+    */
+    private static function send_students_to_api($courseid) {
+        global $DB;
 
         $courselog = $DB->get_record('block_mad2api_course_logs', ['courseid' => $courseid, 'studentssent' => 1]);
 
@@ -771,7 +879,7 @@ class mad_dashboard extends external_api {
             $response = self::do_post_request("api/v2/courses/{$courseid}/students/batch", $data, $courseid);
 
             if (!empty($response->error)) {
-                mtrace("Error sending students for course {$courseid}: " . ($response->message ?? json_encode($response)) . "\n");
+                self::trace("Error sending students for course {$courseid}: " . ($response->message ?? json_encode($response)) . "\n");
                 return false;
             }
         }
@@ -797,9 +905,20 @@ class mad_dashboard extends external_api {
      * @return bool True when the log pipeline finishes successfully.
     */
     public static function api_send_logs($courseid) {
-        global $DB, $USER;
+        return self::guard(function () use ($courseid) {
+            return self::send_logs_to_api((int)$courseid);
+        }, 'api_send_logs for course #' . (int)$courseid, false);
+    }
 
-        $courseid = (int)$courseid;
+    /**
+     * Sends the course logs, original logs and grades to the external API.
+     *
+     * @param int $courseid The ID of the course.
+     * @return bool True when the log pipeline finished successfully.
+    */
+    private static function send_logs_to_api($courseid) {
+        global $DB;
+
         $success = true;
 
         $courselog = $DB->get_record('block_mad2api_course_logs', [
@@ -808,7 +927,7 @@ class mad_dashboard extends external_api {
         ]);
 
         if ($courselog) {
-            mtrace("Logs para o curso {$courseid} já foram enviados anteriormente.\n");
+            self::trace("Logs para o curso {$courseid} já foram enviados anteriormente.\n");
 
             return true;
         }
@@ -835,7 +954,7 @@ class mad_dashboard extends external_api {
         $perpage = 100;
         $endpage = (int)ceil($count / $perpage);
 
-        mtrace("Enviando {$count} logs para o curso {$courseid} ({$endpage} páginas)\n");
+        self::trace("Enviando {$count} logs para o curso {$courseid} ({$endpage} páginas)\n");
 
         $startpage = (!empty($courselog->lastlogpage))
             ? (int)$courselog->lastlogpage
@@ -851,7 +970,7 @@ class mad_dashboard extends external_api {
               ORDER BY m.id ASC
             ", ['courseid' => $courseid], $offset, $perpage);
 
-            mtrace("Enviando página {$currentpage} com " . count($logs) . " logs \n");
+            self::trace("Enviando página {$currentpage} com " . count($logs) . " logs \n");
 
             foreach ($logs as $id => $log) {
                 if ($log->eventname !== '\core\event\course_module_created') {
@@ -911,14 +1030,14 @@ class mad_dashboard extends external_api {
                 $response = self::do_post_request("api/v2/courses/{$courseid}/logs/batch", $data, $courseid);
 
                 if (!self::api_response_is_successful($response)) {
-                    mtrace("Erro ao enviar logs (página {$currentpage}): " . json_encode($response) . "\n");
+                    self::trace("Erro ao enviar logs (página {$currentpage}): " . json_encode($response) . "\n");
 
                     $success = false;
 
                     break;
                 }
-            } catch (\Exception $e) {
-                mtrace("Erro ao enviar logs (página {$currentpage}): " . $e->getMessage() . "\n");
+            } catch (\Throwable $e) {
+                self::trace("Erro ao enviar logs (página {$currentpage}): " . $e->getMessage() . "\n");
 
                 $success = false;
 
@@ -942,7 +1061,7 @@ class mad_dashboard extends external_api {
             $originalcourselogsresponse = self::send_original_course_logs($courseid);
 
             if (!self::api_response_is_successful($originalcourselogsresponse)) {
-                mtrace("Erro ao enviar logs originais: " . json_encode($originalcourselogsresponse) . "\n");
+                self::trace("Erro ao enviar logs originais: " . json_encode($originalcourselogsresponse) . "\n");
 
                 $success = false;
             }
@@ -951,13 +1070,13 @@ class mad_dashboard extends external_api {
                 $gradesresponse = self::send_grades($courseid);
 
                 if (!self::api_response_is_successful($gradesresponse)) {
-                    mtrace("Erro ao enviar notas: " . json_encode($gradesresponse) . "\n");
+                    self::trace("Erro ao enviar notas: " . json_encode($gradesresponse) . "\n");
 
                     $success = false;
                 }
             }
-        } catch (\Exception $e) {
-            mtrace("Erro nas etapas finais: " . $e->getMessage() . "\n");
+        } catch (\Throwable $e) {
+            self::trace("Erro nas etapas finais: " . $e->getMessage() . "\n");
 
             $success = false;
         }
@@ -971,7 +1090,7 @@ class mad_dashboard extends external_api {
             return false;
         }
 
-        mtrace("Envio de logs concluído para curso {$courseid}.\n");
+        self::trace("Envio de logs concluído para curso {$courseid}.\n");
 
         return true;
     }
@@ -1035,7 +1154,7 @@ class mad_dashboard extends external_api {
 
         $courseid = (int)$courseid;
 
-        mtrace("sending activities \n");
+        self::trace("sending activities \n");
 
         $count = $DB->count_records('grade_items', [
             'courseid' => $courseid,
@@ -1046,7 +1165,7 @@ class mad_dashboard extends external_api {
         $endpage = (int)ceil($count / $perpage);
         $url = "api/v2/courses/{$courseid}/events";
 
-        mtrace("Sending {$count} grade items for course {$courseid} in {$endpage} pages\n");
+        self::trace("Sending {$count} grade items for course {$courseid} in {$endpage} pages\n");
 
         for ($currentpage = 1; $currentpage <= $endpage; $currentpage++) {
             $offset = ($currentpage - 1) * $perpage;
@@ -1110,14 +1229,14 @@ class mad_dashboard extends external_api {
 
                         try {
                             $response = self::do_post_request($url, $data, $courseid);
-                        } catch (\Exception $e) {
-                            mtrace("Erro ao enviar nota: " . $e->getMessage() . "\n");
+                        } catch (\Throwable $e) {
+                            self::trace("Erro ao enviar nota: " . $e->getMessage() . "\n");
 
                             return false;
                         }
 
                         if (!self::api_response_is_successful($response)) {
-                            mtrace("Erro ao enviar nota: " . json_encode($response) . "\n");
+                            self::trace("Erro ao enviar nota: " . json_encode($response) . "\n");
 
                             return false;
                         }
@@ -1139,7 +1258,7 @@ class mad_dashboard extends external_api {
 
         $courseid = (int)$courseid;
 
-        mtrace("Sending original course logs for {$courseid}\n");
+        self::trace("Sending original course logs for {$courseid}\n");
 
         $count = $DB->count_records_sql("
             SELECT COUNT(DISTINCT cm.id)
@@ -1151,13 +1270,13 @@ class mad_dashboard extends external_api {
         $perpage = 25;
         $endpage = (int)ceil($count / $perpage);
 
-        mtrace("Sending {$count} activities for course {$courseid} in {$endpage} pages\n");
+        self::trace("Sending {$count} activities for course {$courseid} in {$endpage} pages\n");
 
         for ($currentpage = 1; $currentpage <= $endpage; $currentpage++) {
             $offset = ($currentpage - 1) * $perpage;
             $logs = [];
 
-            mtrace("Sending page {$currentpage} for course {$courseid} \n");
+            self::trace("Sending page {$currentpage} for course {$courseid} \n");
 
             $coursemodules = $DB->get_records_sql("
                 SELECT cm.id AS coursemoduleid,
@@ -1171,12 +1290,12 @@ class mad_dashboard extends external_api {
             ", ['courseid' => $courseid], $offset, $perpage);
 
             if (empty($coursemodules)) {
-                mtrace("No course modules found for course {$courseid} \n");
+                self::trace("No course modules found for course {$courseid} \n");
 
                 continue;
             }
 
-            mtrace("Found " . count($coursemodules) . " course modules for course {$courseid} \n");
+            self::trace("Found " . count($coursemodules) . " course modules for course {$courseid} \n");
 
             foreach ($coursemodules as $coursemodule) {
                 $tablename = $coursemodule->moduletype;
@@ -1185,7 +1304,7 @@ class mad_dashboard extends external_api {
                 $instance = $DB->get_record($tablename, ['id' => $instanceid]);
 
                 if (empty($instance) || !isset($instance->name)) {
-                    mtrace("Instance not found for table {$tablename} with ID {$instanceid}\n");
+                    self::trace("Instance not found for table {$tablename} with ID {$instanceid}\n");
 
                     continue;
                 }
@@ -1193,7 +1312,7 @@ class mad_dashboard extends external_api {
                 $context = \context_module::instance($coursemodule->coursemoduleid, IGNORE_MISSING);
 
                 if (empty($context) || !isset($context->instanceid)) {
-                    mtrace("Context not found for activity #{$coursemodule->coursemoduleid} \n");
+                    self::trace("Context not found for activity #{$coursemodule->coursemoduleid} \n");
 
                     continue;
                 }
@@ -1237,21 +1356,21 @@ class mad_dashboard extends external_api {
                     'timecreated'       => $instance->timemodified ?? time()
                 ];
 
-                mtrace("Sending activity {$instance->name} | {$instanceid} | visible? {$coursemodule->visible} \n");
+                self::trace("Sending activity {$instance->name} | {$instanceid} | visible? {$coursemodule->visible} \n");
             }
 
             $data = ['logs' => $logs];
 
             try {
                 $response = self::do_post_request("api/v2/courses/{$courseid}/logs/batch", $data, $courseid);
-            } catch (\Exception $e) {
-                mtrace("Error sending logs: " . $e->getMessage() . "\n");
+            } catch (\Throwable $e) {
+                self::trace("Error sending logs: " . $e->getMessage() . "\n");
 
                 return false;
             }
 
             if (!self::api_response_is_successful($response)) {
-                mtrace("Error sending original course logs: " . json_encode($response) . "\n");
+                self::trace("Error sending original course logs: " . json_encode($response) . "\n");
 
                 return false;
             }
@@ -1313,9 +1432,20 @@ class mad_dashboard extends external_api {
      * @throws \moodle_exception If there is an error during the process.
     */
     public static function api_dashboard_auth_url($courseid) {
+        return self::guard(function () use ($courseid) {
+            return self::request_dashboard_auth_url((int)$courseid);
+        }, 'api_dashboard_auth_url for course #' . (int)$courseid, (object)[]);
+    }
+
+    /**
+     * Requests the authorization URL from the external API.
+     *
+     * @param int $courseid The ID of the course.
+     * @return object An object containing the authorization URL or an empty object on failure.
+    */
+    private static function request_dashboard_auth_url($courseid) {
         global $USER;
 
-        $courseid = (int)$courseid;
         $auth = [
             'teacherId' => $USER->id,
             'moodleId'  => $courseid,
@@ -1653,123 +1783,147 @@ class mad_dashboard extends external_api {
     }
 
     /**
-     * Sends a POST request to the specified URL with the given body and handles course disabling if necessary.
+     * Sends a POST request to the specified URL with the given body.
+     *
      * @param string $url The endpoint URL (relative to the base API URL).
      * @param array|object $body The data to send in the POST request.
-     * @param int|null $courseid The ID of the course (optional, used for disabling if not found).
-     * @return object|null The response data from the API or null on failure.
+     * @param int|null $courseid The ID of the course the request belongs to, for logging.
+     * @return object The API response, or an error object. Never throws.
     */
     public static function do_post_request($url, $body, $courseid = null) {
-        $apikey = get_config('block_mad2api', 'apikey');
-        $ch = curl_init();
-
-        curl_setopt($ch, CURLOPT_URL, self::get_url_for($url));
-        curl_setopt($ch, CURLOPT_POST, 1);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
-        $headers = [
-            'accept: application/json',
-            'Content-Type: application/json',
-            "API-KEY: {$apikey}"
-        ];
-
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-
-        $response = curl_exec($ch);
-        $curlerror = curl_error($ch);
-        $httpstatus = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-        curl_close($ch);
-
-        if ($response === false) {
-            return (object)[
-                'error' => true,
-                'message' => 'cURL error: ' . $curlerror,
-                'httpstatus' => $httpstatus,
-            ];
-        }
-
-        if ($httpstatus === 204) {
-            return (object)['error' => false, 'httpstatus' => $httpstatus];
-        }
-
-        $decoded = json_decode($response ?? '');
-
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            return (object)[
-                'error' => true,
-                'message' => 'Invalid JSON response from API',
-                'httpstatus' => $httpstatus,
-                'rawresponse' => $response,
-            ];
-        }
-
-        if ($httpstatus >= 400) {
-            if (is_object($decoded)) {
-                $decoded->error = true;
-                $decoded->httpstatus = $httpstatus;
-                $decoded->message = $decoded->message ?? ('HTTP error ' . $httpstatus);
-                return $decoded;
-            }
-
-            return (object)[
-                'error' => true,
-                'message' => 'HTTP error ' . $httpstatus,
-                'httpstatus' => $httpstatus,
-                'rawresponse' => $response,
-            ];
-        }
-
-        if (is_object($decoded) && !property_exists($decoded, 'error')) {
-            $decoded->error = false;
-        }
-
-        return $decoded ?: (object)['error' => false];
+        return self::do_request('POST', $url, $body, $courseid);
     }
 
     /**
      * Sends a PUT request to the specified URL with the given body.
+     *
      * @param string $url The endpoint URL (relative to the base API URL).
      * @param array|object $body The data to send in the PUT request.
-     * @return object|null The response data from the API or null on failure.
+     * @return object The API response, or an error object. Never throws.
     */
     private static function do_put_request($url, $body) {
-        $apikey = get_config('block_mad2api', 'apikey');
-        $ch = curl_init();
+        return self::do_request('PUT', $url, $body);
+    }
 
-        curl_setopt($ch, CURLOPT_URL, self::get_url_for($url));
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT');
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    /**
+     * Sends a GET request to the specified URL.
+     *
+     * @param string $url The endpoint URL (relative to the base API URL).
+     * @return object The API response, or an error object. Never throws.
+    */
+    private static function do_get_request($url) {
+        return self::do_request('GET', $url);
+    }
 
-        $headers = [
-            'accept: application/json',
-            'Content-Type: application/json',
-            "API-KEY: {$apikey}"
+    /**
+     * Performs an HTTP request against the external API.
+     *
+     * This method never throws and never emits output: transport problems,
+     * encoding problems and cURL initialisation problems are all reported as an
+     * error object, so a broken or unreachable API can never break the Moodle
+     * page or the cron task that triggered the request.
+     *
+     * @param string $method HTTP method: GET, POST or PUT.
+     * @param string $url The endpoint URL (relative to the base API URL).
+     * @param array|object|null $body Payload sent with POST and PUT requests.
+     * @param int|null $courseid The ID of the course the request belongs to, for logging.
+     * @return object The API response, or an error object.
+    */
+    private static function do_request($method, $url, $body = null, $courseid = null) {
+        $curlhandle = null;
+        $coursesuffix = $courseid ? " (course #{$courseid})" : '';
+
+        try {
+            $curlhandle = curl_init();
+
+            if ($curlhandle === false) {
+                return self::request_error('Could not initialise cURL', 0);
+            }
+
+            curl_setopt($curlhandle, CURLOPT_URL, self::get_url_for($url));
+            curl_setopt($curlhandle, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($curlhandle, CURLOPT_CONNECTTIMEOUT, self::is_cli() ? self::CLI_CONNECT_TIMEOUT : self::WEB_CONNECT_TIMEOUT);
+            curl_setopt($curlhandle, CURLOPT_TIMEOUT, self::is_cli() ? self::CLI_TIMEOUT : self::WEB_TIMEOUT);
+            curl_setopt($curlhandle, CURLOPT_HTTPHEADER, [
+                'accept: application/json',
+                'Content-Type: application/json',
+                'API-KEY: ' . get_config('block_mad2api', 'apikey'),
+            ]);
+
+            if ($method === 'POST' || $method === 'PUT') {
+                $payload = json_encode($body);
+
+                if ($payload === false) {
+                    return self::request_error('Could not encode request body: ' . json_last_error_msg(), 0);
+                }
+
+                curl_setopt($curlhandle, CURLOPT_POST, true);
+                curl_setopt($curlhandle, CURLOPT_POSTFIELDS, $payload);
+            }
+
+            if ($method === 'PUT') {
+                curl_setopt($curlhandle, CURLOPT_CUSTOMREQUEST, 'PUT');
+            }
+
+            $response = curl_exec($curlhandle);
+            $curlerror = curl_error($curlhandle);
+            $httpstatus = (int)curl_getinfo($curlhandle, CURLINFO_HTTP_CODE);
+        } catch (\Throwable $e) {
+            self::trace("{$method} {$url}{$coursesuffix} failed: " . $e->getMessage());
+
+            return self::request_error($e->getMessage(), 0);
+        } finally {
+            if (!empty($curlhandle)) {
+                curl_close($curlhandle);
+            }
+        }
+
+        return self::parse_response($response, $curlerror, $httpstatus);
+    }
+
+    /**
+     * Builds the error object returned by a failed API request.
+     *
+     * @param string $message Human readable reason for the failure.
+     * @param int $httpstatus HTTP status code, 0 when no response was received.
+     * @param string|null $rawresponse Undecoded response body, when available.
+     * @return object
+    */
+    private static function request_error($message, $httpstatus, $rawresponse = null) {
+        $error = (object)[
+            'error' => true,
+            'message' => $message,
+            'httpstatus' => (int)$httpstatus,
         ];
 
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        if ($rawresponse !== null) {
+            $error->rawresponse = $rawresponse;
+        }
 
-        $response = curl_exec($ch);
-        $curlerror = curl_error($ch);
-        $httpstatus = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        return $error;
+    }
 
-        curl_close($ch);
-
+    /**
+     * Converts a raw cURL result into the response object callers expect.
+     *
+     * @param string|bool $response Body returned by curl_exec().
+     * @param string $curlerror Message returned by curl_error().
+     * @param int $httpstatus HTTP status code of the response.
+     * @return object
+    */
+    private static function parse_response($response, $curlerror, $httpstatus) {
         if ($response === false) {
-            return (object)['error' => true, 'message' => 'cURL error: ' . $curlerror, 'httpstatus' => $httpstatus];
+            return self::request_error('cURL error: ' . $curlerror, $httpstatus);
         }
 
         if ($httpstatus === 204) {
             return (object)['error' => false, 'httpstatus' => $httpstatus];
         }
 
-        $decoded = json_decode($response ?? '');
+        $decoded = json_decode((string)$response);
 
         if (json_last_error() !== JSON_ERROR_NONE) {
-            return (object)['error' => true, 'message' => 'Invalid JSON response from API', 'httpstatus' => $httpstatus, 'rawresponse' => $response];
+            return self::request_error('Invalid JSON response from API', $httpstatus, $response);
         }
 
         if ($httpstatus >= 400) {
@@ -1777,10 +1931,11 @@ class mad_dashboard extends external_api {
                 $decoded->error = true;
                 $decoded->httpstatus = $httpstatus;
                 $decoded->message = $decoded->message ?? ('HTTP error ' . $httpstatus);
+
                 return $decoded;
             }
 
-            return (object)['error' => true, 'message' => 'HTTP error ' . $httpstatus, 'httpstatus' => $httpstatus, 'rawresponse' => $response];
+            return self::request_error('HTTP error ' . $httpstatus, $httpstatus, $response);
         }
 
         if (is_object($decoded) && !property_exists($decoded, 'error')) {
@@ -1791,61 +1946,17 @@ class mad_dashboard extends external_api {
     }
 
     /**
-     * Sends a GET request to the specified URL.
-     * @param string $url The endpoint URL (relative to the base API URL).
-     * @return object|null The response data from the API or null on failure.
+     * Returns the installed plugin release, or an empty string when unknown.
+     *
+     * get_plugin_info() returns null while the plugin cache is being rebuilt,
+     * which used to fatal the caller when the release was read directly.
+     *
+     * @return string
     */
-    private static function do_get_request($url) {
-        $apikey = get_config('block_mad2api', 'apikey');
-        $ch = curl_init();
+    private static function plugin_release() {
+        $plugininfo = \core_plugin_manager::instance()->get_plugin_info('block_mad2api');
 
-        curl_setopt($ch, CURLOPT_URL, self::get_url_for($url));
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
-        $headers = [
-            'accept: application/json',
-            'Content-Type: application/json',
-            "API-KEY: {$apikey}"
-        ];
-
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-
-        $response = curl_exec($ch);
-        $curlerror = curl_error($ch);
-        $httpstatus = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-        curl_close($ch);
-
-        if ($response === false) {
-            return (object)['error' => true, 'message' => 'cURL error: ' . $curlerror, 'httpstatus' => $httpstatus];
-        }
-
-        if ($httpstatus === 204) {
-            return (object)['error' => false, 'httpstatus' => $httpstatus];
-        }
-
-        $decoded = json_decode($response ?? '');
-
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            return (object)['error' => true, 'message' => 'Invalid JSON response from API', 'httpstatus' => $httpstatus, 'rawresponse' => $response];
-        }
-
-        if ($httpstatus >= 400) {
-            if (is_object($decoded)) {
-                $decoded->error = true;
-                $decoded->httpstatus = $httpstatus;
-                $decoded->message = $decoded->message ?? ('HTTP error ' . $httpstatus);
-                return $decoded;
-            }
-
-            return (object)['error' => true, 'message' => 'HTTP error ' . $httpstatus, 'httpstatus' => $httpstatus, 'rawresponse' => $response];
-        }
-
-        if (is_object($decoded) && !property_exists($decoded, 'error')) {
-            $decoded->error = false;
-        }
-
-        return $decoded ?: (object)['error' => false];
+        return $plugininfo->release ?? '';
     }
 
     /**
