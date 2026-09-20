@@ -1,0 +1,57 @@
+name: Release
+
+# Every merge to main publishes a GitHub release tagged with $plugin->release
+# from version.php, carrying mad2api.zip (the plugin folder, ready for
+# "Install plugins" in Moodle). A merge that does not bump the release is a no-op.
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read plugin release from version.php
+        id: plugin
+        run: |
+          release=$(sed -nE "s/^\\\$plugin->release *= *'([^']+)'.*/\1/p" version.php)
+          version=$(sed -nE 's/^\$plugin->version *= *([0-9]+).*/\1/p' version.php)
+          if [ -z "$release" ] || [ -z "$version" ]; then
+            echo "::error file=version.php::could not read \$plugin->release / \$plugin->version"
+            exit 1
+          fi
+          echo "release=$release" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if git rev-parse -q --verify "refs/tags/$release" >/dev/null; then
+            echo "Tag $release already exists; nothing to release."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build mad2api.zip
+        if: steps.plugin.outputs.exists == 'false'
+        run: |
+          git archive --format=zip --prefix=mad2api/ -o mad2api.zip "$GITHUB_SHA"
+          unzip -l mad2api.zip
+
+      - name: Publish release
+        if: steps.plugin.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE: ${{ steps.plugin.outputs.release }}
+          VERSION: ${{ steps.plugin.outputs.version }}
+        run: |
+          gh release create "$RELEASE" mad2api.zip \
+            --target "$GITHUB_SHA" \
+            --title "$RELEASE" \
+            --notes "block_mad2api $RELEASE (version $VERSION)" \
+            --generate-notes

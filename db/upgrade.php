@@ -264,6 +264,28 @@ function xmldb_block_mad2api_upgrade($oldversion) {
     upgrade_block_savepoint(true, 2026060800, 'mad2api');
   }
 
+  if ($oldversion < 2026092000) {
+    // Sites installed while managemonitoring cloned moodle/course:update never
+    // granted it to non-editing teachers, although the archetypes say they
+    // should have it. Grant it to teacher roles that carry no explicit
+    // permission yet; roles an administrator already adjusted are left alone.
+    $systemcontext = context_system::instance();
+
+    foreach (get_archetype_roles('teacher') as $role) {
+      $hasexplicit = $DB->record_exists('role_capabilities', [
+        'roleid'     => $role->id,
+        'capability' => 'block/mad2api:managemonitoring',
+        'contextid'  => $systemcontext->id,
+      ]);
+
+      if (!$hasexplicit) {
+        assign_capability('block/mad2api:managemonitoring', CAP_ALLOW, $role->id, $systemcontext->id);
+      }
+    }
+
+    upgrade_block_savepoint(true, 2026092000, 'mad2api');
+  }
+
   if (!!$DB->get_record("block_mad2api_api_settings", array())) {
     return true;
   }
