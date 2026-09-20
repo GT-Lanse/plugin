@@ -48,6 +48,10 @@ $capabilities = array(
         ]
     ],
 
+    // No 'clonepermissionsfrom' here: cloning moodle/course:update at install
+    // time would leave the non-editing teacher without the capability, while a
+    // role reset would grant it from the archetypes below. The archetypes are
+    // the single source of truth so both paths agree.
     'block/mad2api:managemonitoring' => [
         'captype'      => 'write',
         'contextlevel' => CONTEXT_COURSE,
@@ -56,6 +60,5 @@ $capabilities = array(
             'editingteacher' => CAP_ALLOW,
             'manager'        => CAP_ALLOW,
         ],
-        'clonepermissionsfrom' => 'moodle/course:update',
     ],
 );
