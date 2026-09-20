@@ -1872,6 +1872,7 @@ class mad_dashboard extends external_api {
             $response = curl_exec($curlhandle);
             $curlerror = curl_error($curlhandle);
             $httpstatus = (int)curl_getinfo($curlhandle, CURLINFO_HTTP_CODE);
+            $redirecturl = (string)curl_getinfo($curlhandle, CURLINFO_REDIRECT_URL);
         } catch (\Throwable $e) {
             self::trace("{$method} {$url}{$coursesuffix} failed: " . $e->getMessage());
 
@@ -1882,7 +1883,7 @@ class mad_dashboard extends external_api {
             }
         }
 
-        $result = self::parse_response($response, $curlerror, $httpstatus);
+        $result = self::parse_response($response, $curlerror, $httpstatus, $redirecturl);
 
         // Every failed request is logged here, once, regardless of whether the
         // caller inspects the result. Event observers, for instance, fire and
@@ -2021,15 +2022,28 @@ class mad_dashboard extends external_api {
      * @param string|bool $response Body returned by curl_exec().
      * @param string $curlerror Message returned by curl_error().
      * @param int $httpstatus HTTP status code of the response.
+     * @param string $redirecturl Location the server redirected to, if any.
      * @return object
     */
-    private static function parse_response($response, $curlerror, $httpstatus) {
+    private static function parse_response($response, $curlerror, $httpstatus, $redirecturl = '') {
         if ($response === false) {
             return self::request_error('cURL error: ' . $curlerror, $httpstatus);
         }
 
         if ($httpstatus === 204) {
             return (object)['error' => false, 'httpstatus' => $httpstatus];
+        }
+
+        // Redirects are not followed: cURL would turn POST/PUT into GET. A
+        // redirect means the configured API URL is wrong (usually http vs
+        // https or a stray host), so say that instead of "invalid JSON".
+        if ($httpstatus >= 300 && $httpstatus < 400) {
+            $target = $redirecturl !== '' ? " to {$redirecturl}" : '';
+
+            return self::request_error(
+                "API redirected (HTTP {$httpstatus}){$target}; check the API URL setting",
+                $httpstatus
+            );
         }
 
         $decoded = json_decode((string)$response);
