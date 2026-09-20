@@ -95,3 +95,39 @@ $settings->add(new admin_setting_configselect(
     5,
     $options
 ));
+
+$settings->add(new admin_setting_heading('block_mad2api/timeoutsheading',
+                                         get_string('timeouts_heading', 'block_mad2api'),
+                                         get_string('timeouts_heading_desc', 'block_mad2api')));
+
+$settings->add(new admin_setting_configtext(
+    'block_mad2api/webconnecttimeout',
+    get_string('webconnecttimeout', 'block_mad2api'),
+    get_string('webconnecttimeout_desc', 'block_mad2api'),
+    \block_mad2api\mad_dashboard::WEB_CONNECT_TIMEOUT,
+    PARAM_INT
+));
+
+$settings->add(new admin_setting_configtext(
+    'block_mad2api/webtimeout',
+    get_string('webtimeout', 'block_mad2api'),
+    get_string('webtimeout_desc', 'block_mad2api'),
+    \block_mad2api\mad_dashboard::WEB_TIMEOUT,
+    PARAM_INT
+));
+
+$settings->add(new admin_setting_configtext(
+    'block_mad2api/cliconnecttimeout',
+    get_string('cliconnecttimeout', 'block_mad2api'),
+    get_string('cliconnecttimeout_desc', 'block_mad2api'),
+    \block_mad2api\mad_dashboard::CLI_CONNECT_TIMEOUT,
+    PARAM_INT
+));
+
+$settings->add(new admin_setting_configtext(
+    'block_mad2api/clitimeout',
+    get_string('clitimeout', 'block_mad2api'),
+    get_string('clitimeout_desc', 'block_mad2api'),
+    \block_mad2api\mad_dashboard::CLI_TIMEOUT,
+    PARAM_INT
+));

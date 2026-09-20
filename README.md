@@ -45,6 +45,7 @@ Bloco para Moodle que integra cursos à plataforma **LANSE**, permitindo habilit
 - `API URL`: endpoint da API LANSE/MAD.  
 - `Access Key` e `Secret Key`: credenciais da integração.  
 - `User Roles`: papéis do Moodle autorizados a visualizar o bloco (ex.: professor, coordenador).  
+- `Tempos limite da API`: limites (em segundos) de conexão e de requisição para chamadas à API, separados para requisições web (durante o carregamento da página do curso; padrão 3s/5s) e para tarefas agendadas (padrão 10s/120s). Toda requisição que falha ou estoura o tempo limite é registrada no log com método, endpoint, curso e tempo decorrido.
 
 - **Configuração por curso**  
 - Adicione o bloco **LANSE Dashboard** na página do curso.  
