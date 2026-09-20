@@ -81,6 +81,16 @@ $string['roles'] = 'Perfil Professor/Tutor na LANSE';
 $string['roles_desc'] = 'Perfis que terão acesso ao Plugin como professor/tutor';
 $string['studentrole'] = 'Selecione o papel de estudante na LANSE';
 $string['studentrole_desc'] = 'Perfil utilizado para identificar os estudantes no Plugin';
+$string['timeouts_heading'] = 'API timeouts';
+$string['timeouts_heading_desc'] = 'Limits, in seconds, for requests sent to the LANSE API. Web requests run while a course page is loading, so keep them short: a slow or unreachable API delays every page of a monitored course by up to this amount. Scheduled tasks (cron) can afford longer limits.';
+$string['webconnecttimeout'] = 'Connection timeout (web)';
+$string['webconnecttimeout_desc'] = 'Seconds allowed to establish a connection during a page request. Default: 3.';
+$string['webtimeout'] = 'Request timeout (web)';
+$string['webtimeout_desc'] = 'Seconds allowed for a whole request during a page request, connection included. Default: 5.';
+$string['cliconnecttimeout'] = 'Connection timeout (scheduled tasks)';
+$string['cliconnecttimeout_desc'] = 'Seconds allowed to establish a connection from scheduled tasks (cron). Default: 10.';
+$string['clitimeout'] = 'Request timeout (scheduled tasks)';
+$string['clitimeout_desc'] = 'Seconds allowed for a whole request from scheduled tasks (cron), connection included. Default: 120.';
 
 // classes/task/mad_logger.php
 $string['send_logs_task_name'] = 'Envio de Logs LANSE';

@@ -43,16 +43,16 @@ use external_value;
  */
 class mad_dashboard extends external_api {
 
-    /** @var int Seconds allowed to establish a connection during a web request. */
-    const WEB_CONNECT_TIMEOUT = 5;
+    /** @var int Default seconds allowed to establish a connection during a web request. */
+    const WEB_CONNECT_TIMEOUT = 3;
 
-    /** @var int Seconds allowed for a whole request during a web request. */
-    const WEB_TIMEOUT = 15;
+    /** @var int Default seconds allowed for a whole request during a web request. */
+    const WEB_TIMEOUT = 5;
 
-    /** @var int Seconds allowed to establish a connection from CLI/cron. */
+    /** @var int Default seconds allowed to establish a connection from CLI/cron. */
     const CLI_CONNECT_TIMEOUT = 10;
 
-    /** @var int Seconds allowed for a whole request from CLI/cron. */
+    /** @var int Default seconds allowed for a whole request from CLI/cron. */
     const CLI_TIMEOUT = 120;
 
     public function __construct() {}
@@ -468,7 +468,7 @@ class mad_dashboard extends external_api {
         $response = self::api_check_pending_activities();
 
         if (!self::api_response_is_successful($response)) {
-            self::trace("Error checking pending activities: " . json_encode($response) . "\n");
+            self::trace("Error checking pending activities: " . self::describe_response($response) . "\n");
 
             return false;
         }
@@ -539,7 +539,7 @@ class mad_dashboard extends external_api {
         $response = self::do_put_request("api/v3/courses/{$courseid}/activities/{$contextid}", ['name' => $name]);
 
         if (!self::api_response_is_successful($response)) {
-            self::trace("Error sending activity name to API: " . json_encode($response) . "\n");
+            self::trace("Error sending activity name to API: " . self::describe_response($response) . "\n");
 
             return false;
         }
@@ -592,7 +592,7 @@ class mad_dashboard extends external_api {
         $response = self::api_check_course_data((int)$courseid);
 
         if (!self::api_response_is_successful($response)) {
-            self::trace("Error checking resend data for course #{$courseid}: " . json_encode($response) . "\n");
+            self::trace("Error checking resend data for course #{$courseid}: " . self::describe_response($response) . "\n");
 
             return;
         }
@@ -697,7 +697,7 @@ class mad_dashboard extends external_api {
         $response = self::do_put_request('api/v2/settings/organizations/', $settings);
 
         if (!self::api_response_is_successful($response)) {
-            self::trace("Error sending organization settings to API: " . json_encode($response) . "\n");
+            self::trace("Error sending organization settings to API: " . self::describe_response($response) . "\n");
 
             return false;
         }
@@ -743,7 +743,7 @@ class mad_dashboard extends external_api {
         $response = self::do_put_request('api/v2/settings/organizations/', $settings);
 
         if (!self::api_response_is_successful($response)) {
-            self::trace("Error sending plugin installation data to API: " . json_encode($response) . "\n");
+            self::trace("Error sending plugin installation data to API: " . self::describe_response($response) . "\n");
         }
     }
 
@@ -796,7 +796,7 @@ class mad_dashboard extends external_api {
         $enableresponse = self::do_post_request("api/v3/courses/{$courseid}/enable", $enable);
 
         if (!self::api_response_is_successful($enableresponse)) {
-            self::trace("Error enabling course #{$courseid} in API: " . json_encode($enableresponse) . "\n");
+            self::trace("Error enabling course #{$courseid} in API: " . self::describe_response($enableresponse) . "\n");
 
             return null;
         }
@@ -810,7 +810,7 @@ class mad_dashboard extends external_api {
         $resp = self::do_post_request('api/v2/authorize', $auth);
 
         if (!self::api_response_is_successful($resp)) {
-            self::trace("Error authorizing course #{$courseid} in API: " . json_encode($resp) . "\n");
+            self::trace("Error authorizing course #{$courseid} in API: " . self::describe_response($resp) . "\n");
 
             return null;
         }
@@ -879,7 +879,7 @@ class mad_dashboard extends external_api {
             $response = self::do_post_request("api/v2/courses/{$courseid}/students/batch", $data, $courseid);
 
             if (!empty($response->error)) {
-                self::trace("Error sending students for course {$courseid}: " . ($response->message ?? json_encode($response)) . "\n");
+                self::trace("Error sending students for course {$courseid}: " . self::describe_response($response) . "\n");
                 return false;
             }
         }
@@ -1030,7 +1030,7 @@ class mad_dashboard extends external_api {
                 $response = self::do_post_request("api/v2/courses/{$courseid}/logs/batch", $data, $courseid);
 
                 if (!self::api_response_is_successful($response)) {
-                    self::trace("Erro ao enviar logs (página {$currentpage}): " . json_encode($response) . "\n");
+                    self::trace("Erro ao enviar logs (página {$currentpage}): " . self::describe_response($response) . "\n");
 
                     $success = false;
 
@@ -1061,7 +1061,7 @@ class mad_dashboard extends external_api {
             $originalcourselogsresponse = self::send_original_course_logs($courseid);
 
             if (!self::api_response_is_successful($originalcourselogsresponse)) {
-                self::trace("Erro ao enviar logs originais: " . json_encode($originalcourselogsresponse) . "\n");
+                self::trace("Erro ao enviar logs originais: " . self::describe_response($originalcourselogsresponse) . "\n");
 
                 $success = false;
             }
@@ -1070,7 +1070,7 @@ class mad_dashboard extends external_api {
                 $gradesresponse = self::send_grades($courseid);
 
                 if (!self::api_response_is_successful($gradesresponse)) {
-                    self::trace("Erro ao enviar notas: " . json_encode($gradesresponse) . "\n");
+                    self::trace("Erro ao enviar notas: " . self::describe_response($gradesresponse) . "\n");
 
                     $success = false;
                 }
@@ -1236,7 +1236,7 @@ class mad_dashboard extends external_api {
                         }
 
                         if (!self::api_response_is_successful($response)) {
-                            self::trace("Erro ao enviar nota: " . json_encode($response) . "\n");
+                            self::trace("Erro ao enviar nota: " . self::describe_response($response) . "\n");
 
                             return false;
                         }
@@ -1370,7 +1370,7 @@ class mad_dashboard extends external_api {
             }
 
             if (!self::api_response_is_successful($response)) {
-                self::trace("Error sending original course logs: " . json_encode($response) . "\n");
+                self::trace("Error sending original course logs: " . self::describe_response($response) . "\n");
 
                 return false;
             }
@@ -1474,11 +1474,11 @@ class mad_dashboard extends external_api {
             $courseidrow = $DB->get_record_sql("
                 SELECT c.id
                   FROM {course} c
-                  JOIN {context} ct ON c.id = ct.instanceid
+                  JOIN {context} ct ON c.id = ct.instanceid AND ct.contextlevel = :contextlevel
                   JOIN {role_assignments} ra ON ra.contextid = ct.id
                   JOIN {user} u ON u.id = ra.userid
                  WHERE c.id = :courseid AND u.id = :userid
-            ", ['courseid' => (int)$monitoredcourse->courseid, 'userid' => $userid]);
+            ", ['contextlevel' => CONTEXT_COURSE, 'courseid' => (int)$monitoredcourse->courseid, 'userid' => $userid]);
 
             if (!empty($courseidrow)) {
                 return $courseidrow;
@@ -1502,12 +1502,12 @@ class mad_dashboard extends external_api {
         return $DB->count_records_sql("
             SELECT COUNT(*)
               FROM {course} c
-              JOIN {context} ct ON c.id = ct.instanceid
+              JOIN {context} ct ON c.id = ct.instanceid AND ct.contextlevel = :contextlevel
               JOIN {role_assignments} ra ON ra.contextid = ct.id
               JOIN {user} u ON u.id = ra.userid
               JOIN {role} r ON r.id = ra.roleid
              WHERE c.id = :courseid AND r.id = :roleid
-        ", ['courseid' => $courseid, 'roleid' => $studentrole]);
+        ", ['contextlevel' => CONTEXT_COURSE, 'courseid' => $courseid, 'roleid' => $studentrole]);
     }
 
     /**
@@ -1533,7 +1533,7 @@ class mad_dashboard extends external_api {
                    AVG(g.rawgrade) AS current_grade,
                    u.phone1, u.phone2
               FROM {course} c
-              JOIN {context} ct ON c.id = ct.instanceid
+              JOIN {context} ct ON c.id = ct.instanceid AND ct.contextlevel = :contextlevel
               JOIN {role_assignments} ra ON ra.contextid = ct.id
               JOIN {user} u ON u.id = ra.userid
               JOIN {role} r ON r.id = ra.roleid
@@ -1545,6 +1545,7 @@ class mad_dashboard extends external_api {
         ";
 
         $params = [
+            'contextlevel' => CONTEXT_COURSE,
             'courseid_gi' => $courseid,
             'courseid'    => $courseid,
             'roleid'      => $studentrole
@@ -1575,7 +1576,7 @@ class mad_dashboard extends external_api {
                    (CASE WHEN u.lastaccess = '0' THEN 'false' ELSE 'true' END) AS logged_in,
                    AVG(g.rawgrade) AS current_grade
               FROM {course} c
-              JOIN {context} ct ON c.id = ct.instanceid
+              JOIN {context} ct ON c.id = ct.instanceid AND ct.contextlevel = :contextlevel
               JOIN {role_assignments} ra ON ra.contextid = ct.id
               JOIN {user} u ON u.id = ra.userid
               JOIN {role} r ON r.id = ra.roleid
@@ -1586,6 +1587,7 @@ class mad_dashboard extends external_api {
         ";
 
         $params = [
+            'contextlevel' => CONTEXT_COURSE,
             'courseid_gi' => $courseid,
             'courseid'    => $courseid,
             'roleid'      => $studentrole,
@@ -1627,7 +1629,7 @@ class mad_dashboard extends external_api {
                         ELSE 'teacher'
                     END) AS role
               FROM {course} c
-              JOIN {context} ct ON c.id = ct.instanceid
+              JOIN {context} ct ON c.id = ct.instanceid AND ct.contextlevel = :contextlevel
               JOIN {role_assignments} ra ON ra.contextid = ct.id
               JOIN {user} u ON u.id = ra.userid
               JOIN {role} r ON r.id = ra.roleid
@@ -1638,6 +1640,7 @@ class mad_dashboard extends external_api {
         ";
 
         $params = array_merge([
+            'contextlevel' => CONTEXT_COURSE,
             'studentrole' => $studentrole,
             'courseid_gi' => $courseid,
             'courseid'    => $courseid,
@@ -1670,14 +1673,14 @@ class mad_dashboard extends external_api {
                    u.firstname AS first_name, u.lastname AS last_name,
                    r.shortname AS moodle_role, u.phone1, u.phone2
               FROM {course} c
-              JOIN {context} ct ON c.id = ct.instanceid
+              JOIN {context} ct ON c.id = ct.instanceid AND ct.contextlevel = :contextlevel
               JOIN {role_assignments} ra ON ra.contextid = ct.id
               JOIN {user} u ON u.id = ra.userid
               JOIN {role} r ON r.id = ra.roleid
              WHERE c.id = :courseid AND r.id {$insql}
         ";
 
-        $params = array_merge(['courseid' => $courseid], $inparams);
+        $params = array_merge(['contextlevel' => CONTEXT_COURSE, 'courseid' => $courseid], $inparams);
 
         return array_values($DB->get_records_sql($sql, $params));
     }
@@ -1703,14 +1706,14 @@ class mad_dashboard extends external_api {
                    u.firstname AS first_name, u.lastname AS last_name,
                    r.shortname AS moodle_role, u.phone1, u.phone2
               FROM {course} c
-              JOIN {context} ct ON c.id = ct.instanceid
+              JOIN {context} ct ON c.id = ct.instanceid AND ct.contextlevel = :contextlevel
               JOIN {role_assignments} ra ON ra.contextid = ct.id
               JOIN {user} u ON u.id = ra.userid
               JOIN {role} r ON r.id = ra.roleid
              WHERE c.id = :courseid AND r.id {$insql}
         ";
 
-        $params = array_merge(['courseid' => $courseid], $inparams);
+        $params = array_merge(['contextlevel' => CONTEXT_COURSE, 'courseid' => $courseid], $inparams);
 
         return array_values($DB->get_records_sql($sql, $params));
     }
@@ -1832,6 +1835,7 @@ class mad_dashboard extends external_api {
     private static function do_request($method, $url, $body = null, $courseid = null) {
         $curlhandle = null;
         $coursesuffix = $courseid ? " (course #{$courseid})" : '';
+        $start = microtime(true);
 
         try {
             $curlhandle = curl_init();
@@ -1842,8 +1846,8 @@ class mad_dashboard extends external_api {
 
             curl_setopt($curlhandle, CURLOPT_URL, self::get_url_for($url));
             curl_setopt($curlhandle, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($curlhandle, CURLOPT_CONNECTTIMEOUT, self::is_cli() ? self::CLI_CONNECT_TIMEOUT : self::WEB_CONNECT_TIMEOUT);
-            curl_setopt($curlhandle, CURLOPT_TIMEOUT, self::is_cli() ? self::CLI_TIMEOUT : self::WEB_TIMEOUT);
+            curl_setopt($curlhandle, CURLOPT_CONNECTTIMEOUT, self::connect_timeout());
+            curl_setopt($curlhandle, CURLOPT_TIMEOUT, self::request_timeout());
             curl_setopt($curlhandle, CURLOPT_HTTPHEADER, [
                 'accept: application/json',
                 'Content-Type: application/json',
@@ -1878,7 +1882,114 @@ class mad_dashboard extends external_api {
             }
         }
 
-        return self::parse_response($response, $curlerror, $httpstatus);
+        $result = self::parse_response($response, $curlerror, $httpstatus);
+
+        // Every failed request is logged here, once, regardless of whether the
+        // caller inspects the result. Event observers, for instance, fire and
+        // forget, and a slow or unreachable API would otherwise go unnoticed.
+        if (!empty($result->error)) {
+            self::trace(sprintf(
+                '%s %s%s failed after %.1fs: %s',
+                $method,
+                $url,
+                $coursesuffix,
+                microtime(true) - $start,
+                self::describe_response($result)
+            ));
+        }
+
+        return $result;
+    }
+
+    /**
+     * Seconds cURL may spend establishing the connection for the current request.
+     *
+     * Web requests block a page render, so they get a short budget; cron gets a
+     * generous one. Both are administrator-configurable.
+     *
+     * @return int
+     */
+    private static function connect_timeout() {
+        return self::is_cli()
+            ? self::timeout_setting('cliconnecttimeout', self::CLI_CONNECT_TIMEOUT)
+            : self::timeout_setting('webconnecttimeout', self::WEB_CONNECT_TIMEOUT);
+    }
+
+    /**
+     * Seconds cURL may spend on the whole request, connection included.
+     *
+     * @return int
+     */
+    private static function request_timeout() {
+        return self::is_cli()
+            ? self::timeout_setting('clitimeout', self::CLI_TIMEOUT)
+            : self::timeout_setting('webtimeout', self::WEB_TIMEOUT);
+    }
+
+    /**
+     * Reads a timeout from the plugin settings, falling back to the default
+     * when the setting is missing or not a positive integer.
+     *
+     * @param string $name Setting name.
+     * @param int $default Default in seconds.
+     * @return int
+     */
+    private static function timeout_setting($name, $default) {
+        $value = get_config('block_mad2api', $name);
+
+        if ($value === false || $value === '' || !is_numeric($value) || (int)$value < 1) {
+            return $default;
+        }
+
+        return (int)$value;
+    }
+
+    /**
+     * Summarises an API response in one bounded line, for log messages.
+     *
+     * Responses are never logged verbatim: a misconfigured API URL returns whole
+     * HTML pages, and dumping those into mtrace output or error logs makes both
+     * unreadable.
+     *
+     * @param mixed $response Value returned by do_request() or a caller wrapper.
+     * @return string
+     */
+    private static function describe_response($response) {
+        if ($response === null || $response === false) {
+            return 'no response';
+        }
+
+        if (is_object($response) && !empty($response->error)) {
+            $summary = (string)($response->message ?? 'unknown error');
+            $summary .= ' (HTTP ' . (int)($response->httpstatus ?? 0) . ')';
+
+            if (!empty($response->rawresponse)) {
+                $summary .= ' body: ' . $response->rawresponse;
+            }
+
+            return $summary;
+        }
+
+        $encoded = json_encode($response, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+        return self::excerpt($encoded === false ? gettype($response) : $encoded);
+    }
+
+    /**
+     * Reduces arbitrary text to a single short line safe to embed in a log message.
+     *
+     * @param string $text Text to reduce.
+     * @param int $limit Maximum number of characters kept.
+     * @return string
+     */
+    private static function excerpt($text, $limit = 300) {
+        $text = trim(preg_replace('/\s+/', ' ', strip_tags((string)$text)));
+
+        if (\core_text::strlen($text) <= $limit) {
+            return $text;
+        }
+
+        return \core_text::substr($text, 0, $limit) . '…';
     }
 
     /**
@@ -1887,6 +1998,7 @@ class mad_dashboard extends external_api {
      * @param string $message Human readable reason for the failure.
      * @param int $httpstatus HTTP status code, 0 when no response was received.
      * @param string|null $rawresponse Undecoded response body, when available.
+     *        Only a short, tag-stripped excerpt is kept.
      * @return object
     */
     private static function request_error($message, $httpstatus, $rawresponse = null) {
@@ -1897,7 +2009,7 @@ class mad_dashboard extends external_api {
         ];
 
         if ($rawresponse !== null) {
-            $error->rawresponse = $rawresponse;
+            $error->rawresponse = self::excerpt($rawresponse);
         }
 
         return $error;
