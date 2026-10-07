@@ -46,6 +46,7 @@ Bloco para Moodle que integra cursos à plataforma **LANSE**, permitindo habilit
 - `Access Key` e `Secret Key`: credenciais da integração.  
 - `User Roles`: papéis do Moodle autorizados a visualizar o bloco (ex.: professor, coordenador).  
 - `Tempos limite da API`: limites (em segundos) de conexão e de requisição para chamadas à API, separados para requisições web (durante o carregamento da página do curso; padrão 3s/5s) e para tarefas agendadas (padrão 10s/120s). Toda requisição que falha ou estoura o tempo limite é registrada no log com método, endpoint, curso e tempo decorrido.
+- **Falhas nas tarefas agendadas**: `mad_logger` e `mad_check_resend_data` terminam com falha quando qualquer chamada à API falha. Isso aciona o recuo exponencial do Moodle (`faildelay`, de 60s até 24h) e preserva o log da execução mesmo com `task_logmode` = "somente falhas". Quando uma requisição não recebe resposta alguma (conexão recusada ou tempo limite), os cursos restantes daquela execução são pulados, para não pagar o tempo limite uma vez por curso.
 
 - **Configuração por curso**  
 - Adicione o bloco **LANSE Dashboard** na página do curso.  

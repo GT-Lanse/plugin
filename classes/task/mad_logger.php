@@ -25,8 +25,9 @@
 namespace block_mad2api\task;
 
 defined('MOODLE_INTERNAL') || die();
+
 /**
- * An example of a scheduled task.
+ * Sends enrolled students and course logs for every course awaiting delivery.
  */
 class mad_logger extends \core\task\scheduled_task {
     /**
@@ -40,9 +41,15 @@ class mad_logger extends \core\task\scheduled_task {
 
     /**
      * Execute the task.
+     *
+     * Throws when any API call failed so that Moodle marks the run as failed:
+     * the core fail delay then backs the task off while the API is down, and
+     * the run log is kept even when task_logmode only records failures.
+     *
+     * @throws \moodle_exception When at least one API call failed.
      */
     public function execute() {
-        global $DB, $CFG;
+        global $DB;
 
         list($statussql, $statusparams) = $DB->get_in_or_equal(
             ['todo', 'wip', 'error'],
@@ -56,11 +63,31 @@ class mad_logger extends \core\task\scheduled_task {
             $statusparams
         );
 
+        $failures = 0;
+
         foreach ($records as $record) {
-            // One failing course must not abort the run for the remaining ones.
-            \block_mad2api\mad_dashboard::guard(function () use ($record) {
-                $this->send_course_data($record);
-            }, 'mad_logger for course #' . (int)$record->courseid);
+            $transportfailures = \block_mad2api\mad_dashboard::transport_failures();
+
+            // One failing course must not abort the run for the remaining ones...
+            $sent = \block_mad2api\mad_dashboard::guard(function () use ($record) {
+                return $this->send_course_data($record);
+            }, 'mad_logger for course #' . (int)$record->courseid, false);
+
+            if (!$sent) {
+                $failures++;
+            }
+
+            // ...unless the API is not answering at all: every further course
+            // would only burn the full request timeout.
+            if (\block_mad2api\mad_dashboard::transport_failures() > $transportfailures) {
+                mtrace("API unreachable, skipping the remaining courses in this run \n");
+
+                break;
+            }
+        }
+
+        if ($failures > 0) {
+            throw new \moodle_exception('task_api_failures', 'block_mad2api', '', $failures);
         }
     }
 
@@ -68,6 +95,7 @@ class mad_logger extends \core\task\scheduled_task {
      * Sends students and logs for a single course log record.
      *
      * @param \stdClass $record The block_mad2api_course_logs record.
+     * @return bool True when nothing had to be sent or everything was accepted by the API.
      */
     private function send_course_data($record) {
         global $DB;
@@ -75,7 +103,7 @@ class mad_logger extends \core\task\scheduled_task {
         if (!\block_mad2api\mad_dashboard::is_course_enabled((int)$record->courseid)) {
             mtrace("Skipping course #" . $record->courseid . " because monitoring is disabled.\n");
 
-            return;
+            return true;
         }
 
         $data = array(
@@ -109,7 +137,7 @@ class mad_logger extends \core\task\scheduled_task {
 
             $DB->update_record('block_mad2api_course_logs', $data);
 
-            return;
+            return false;
         }
 
         mtrace("course logs sent \n");
@@ -124,5 +152,7 @@ class mad_logger extends \core\task\scheduled_task {
         $DB->update_record('block_mad2api_course_logs', $data);
 
         mtrace("course log updated to done \n");
+
+        return true;
     }
 }

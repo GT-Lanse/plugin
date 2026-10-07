@@ -39,6 +39,21 @@ function ($, ajax, notification, str, ModalFactory) {
         }).fail(notification.exception);
       }
 
+      // core/notification.exception() titles its modal with the exception's
+      // errorcode (e.g. "nopermissionmonitoring"), so web service failures
+      // get a translated title and the server's message as the body instead.
+      function showRequestError(ex) {
+        if (!ex || !ex.message) {
+          notification.exception(ex);
+          return;
+        }
+
+        str.get_string('request_error_title', 'block_mad2api')
+          .then(title => ModalFactory.create({ title, body: ex.message }))
+          .then(modal => modal.show())
+          .catch(notification.exception);
+      }
+
       // =========================
       // ENABLE
       // =========================
@@ -60,7 +75,7 @@ function ($, ajax, notification, str, ModalFactory) {
 
         const promise = ajax.call([request])[0];
 
-        promise.fail(notification.exception);
+        promise.fail(showRequestError);
 
         promise.done(response => {
           const body = response[0];
@@ -115,7 +130,7 @@ function ($, ajax, notification, str, ModalFactory) {
 
         const promise = ajax.call([request])[0];
 
-        promise.fail(notification.exception);
+        promise.fail(showRequestError);
 
         promise.done(response => {
           const body = response[0];

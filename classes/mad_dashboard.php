@@ -55,6 +55,9 @@ class mad_dashboard extends external_api {
     /** @var int Default seconds allowed for a whole request from CLI/cron. */
     const CLI_TIMEOUT = 120;
 
+    /** @var int Requests in this process that ended without any HTTP response (connection or timeout failure). */
+    private static $transportfailures = 0;
+
     public function __construct() {}
 
     /**
@@ -548,29 +551,43 @@ class mad_dashboard extends external_api {
     }
 
     /**
+     * Number of API requests in this process that failed before any HTTP
+     * response arrived: connection refused, DNS failure or timeout.
+     *
+     * Scheduled tasks compare this counter before and after each course to
+     * detect an unreachable API and stop early, instead of paying the full
+     * request timeout once per course.
+     *
+     * @return int
+     */
+    public static function transport_failures(): int {
+        return self::$transportfailures;
+    }
+
+    /**
      * Checks if the course data needs to be resent to the API and updates the course log accordingly.
      *
      * @param int $courseid The ID of the course to check.
-     * @return void
+     * @return bool True when the check finished without API errors.
     */
     public static function check_data_on_api($courseid) {
-        self::guard(function () use ($courseid) {
-            self::resend_course_data_if_needed((int)$courseid);
-        }, 'check_data_on_api for course #' . (int)$courseid);
+        return self::guard(function () use ($courseid) {
+            return self::resend_course_data_if_needed((int)$courseid);
+        }, 'check_data_on_api for course #' . (int)$courseid, false);
     }
 
     /**
      * Asks the API whether the course data must be resent and reschedules it.
      *
      * @param int $courseid The ID of the course to check.
-     * @return void
+     * @return bool True when the check finished without API errors.
     */
     private static function resend_course_data_if_needed($courseid) {
         global $DB;
 
         if (!self::is_course_enabled($courseid)) {
             self::trace("Course #{$courseid} monitoring is disabled. Skipping resend check.\n");
-            return;
+            return true;
         }
 
         $lastlogs = $DB->get_records(
@@ -586,7 +603,7 @@ class mad_dashboard extends external_api {
         if (!$courselog) {
             self::trace("Course log not found for course #{$courseid} \n");
 
-            return;
+            return true;
         }
 
         $response = self::api_check_course_data((int)$courseid);
@@ -594,7 +611,7 @@ class mad_dashboard extends external_api {
         if (!self::api_response_is_successful($response)) {
             self::trace("Error checking resend data for course #{$courseid}: " . self::describe_response($response) . "\n");
 
-            return;
+            return false;
         }
 
         if ($response && !empty($response->resend_data)) {
@@ -605,7 +622,7 @@ class mad_dashboard extends external_api {
             if (empty($enableresponse)) {
                 self::trace("Error resending course #{$courseid} data to API. Course log was not changed.\n");
 
-                return;
+                return false;
             }
 
             $updatedattributes = [
@@ -618,6 +635,8 @@ class mad_dashboard extends external_api {
 
             $DB->update_record('block_mad2api_course_logs', $updatedattributes, false);
         }
+
+        return true;
     }
 
     /**
@@ -1870,6 +1889,11 @@ class mad_dashboard extends external_api {
             }
 
             $response = curl_exec($curlhandle);
+
+            if ($response === false) {
+                self::$transportfailures++;
+            }
+
             $curlerror = curl_error($curlhandle);
             $httpstatus = (int)curl_getinfo($curlhandle, CURLINFO_HTTP_CODE);
             $redirecturl = (string)curl_getinfo($curlhandle, CURLINFO_REDIRECT_URL);
