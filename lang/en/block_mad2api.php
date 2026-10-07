@@ -22,7 +22,6 @@
  * @license   https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-$string['apiurl'] = 'API URL';
 $string['descconfig'] = 'Description of the config section';
 $string['descfoo'] = 'Config description';
 $string['headerconfig'] = 'Config section header';
@@ -36,6 +35,7 @@ $string['nopermissiondashboard'] = 'You do not have permission to access the LAN
 $string['nopermissionmonitoring'] = 'You do not have permission to manage LANSE monitoring for this course.';
 $string['pluginname'] = 'Dashboard LANSE';
 $string['error_modal_title'] = 'Error on enabling course';
+$string['request_error_title'] = 'Request failed';
 $string['eventdashboardviewed'] = 'LANSE dashboard viewed';
 $string['eventmonitoringdisabled'] = 'LANSE course monitoring disabled';
 $string['eventmonitoringenabled'] = 'LANSE course monitoring enabled';
@@ -62,25 +62,25 @@ $string['privacy:metadata:external:progress'] = 'The completion progress of the 
 $string['privacy:metadata:external:lastaccess'] = 'The timestamp of the user\'s last access to the course.';
 
 // view.php
-$string['api_contact_error'] = 'Falha ao contatar a API (erro Moodle).';
-$string['api_contact_error_retry'] = 'Falha ao contatar a API. Tente novamente mais tarde.';
-$string['api_response_invalid'] = 'Resposta da API inválida.';
-$string['api_token_missing'] = 'Token não recebido da API.';
+$string['api_contact_error'] = 'Failed to contact the API (Moodle error).';
+$string['api_contact_error_retry'] = 'Failed to contact the API. Please try again later.';
+$string['api_response_invalid'] = 'Invalid API response.';
+$string['api_token_missing'] = 'Token not received from the API.';
 $string['page_title'] = 'LANSE - Dashboard';
-$string['page_heading'] = 'Dashboard LANSE - Curso: {$a->coursefullname}';
-$string['post_message_error'] = 'Erro ao enviar postMessage para LANSE:';
+$string['page_heading'] = 'LANSE Dashboard - Course: {$a->coursefullname}';
+$string['post_message_error'] = 'Error sending postMessage to LANSE:';
 
 // settings.php
-$string['adminroles'] = 'Perfil Coordenador na LANSE';
-$string['adminroles_desc'] = 'Perfis que terão acesso ao Plugin como coordenador';
-$string['apikey'] = 'Chave API KEY Plugin';
-$string['apiurl'] = 'URL da API';
-$string['appurl'] = 'URL da plataforma';
-$string['organization'] = 'Nome da organização';
-$string['roles'] = 'Perfil Professor/Tutor na LANSE';
-$string['roles_desc'] = 'Perfis que terão acesso ao Plugin como professor/tutor';
-$string['studentrole'] = 'Selecione o papel de estudante na LANSE';
-$string['studentrole_desc'] = 'Perfil utilizado para identificar os estudantes no Plugin';
+$string['adminroles'] = 'Coordinator role in LANSE';
+$string['adminroles_desc'] = 'Roles that access the plugin as coordinator';
+$string['apikey'] = 'Plugin API key';
+$string['apiurl'] = 'API URL';
+$string['appurl'] = 'Platform URL';
+$string['organization'] = 'Organisation name';
+$string['roles'] = 'Teacher/Tutor role in LANSE';
+$string['roles_desc'] = 'Roles that access the plugin as teacher/tutor';
+$string['studentrole'] = 'Student role in LANSE';
+$string['studentrole_desc'] = 'Role used to identify students in the plugin';
 $string['timeouts_heading'] = 'API timeouts';
 $string['timeouts_heading_desc'] = 'Limits, in seconds, for requests sent to the LANSE API. Web requests run while a course page is loading, so keep them short: a slow or unreachable API delays every page of a monitored course by up to this amount. Scheduled tasks (cron) can afford longer limits.';
 $string['webconnecttimeout'] = 'Connection timeout (web)';
@@ -92,9 +92,10 @@ $string['cliconnecttimeout_desc'] = 'Seconds allowed to establish a connection f
 $string['clitimeout'] = 'Request timeout (scheduled tasks)';
 $string['clitimeout_desc'] = 'Seconds allowed for a whole request from scheduled tasks (cron), connection included. Default: 120.';
 
-// classes/task/mad_logger.php
-$string['send_logs_task_name'] = 'Envio de Logs LANSE';
-$string['check_resend_data_task_name'] = 'Verificação de Reenvio de Dados LANSE';
+// classes/task/
+$string['send_logs_task_name'] = 'LANSE log delivery';
+$string['check_resend_data_task_name'] = 'LANSE resend data check';
+$string['task_api_failures'] = '{$a} API call(s) failed during this run. See the task log above for details; Moodle will retry the task with an increasing delay.';
 
 $string['dashboardnotenabled'] = 'Course monitoring is disabled for this course.';
 

@@ -31,6 +31,7 @@ $string['mad2api:addinstance'] = 'Adicionar LANSE';
 $string['mad2api:context_course'] = 'Usar LANSE no contexto do curso';
 $string['pluginname'] = 'Painel LANSE';
 $string['error_modal_title'] = 'Erro ao habilitar curso';
+$string['request_error_title'] = 'Falha na requisição';
 $string['eventdashboardviewed'] = 'Painel LANSE visualizado';
 $string['eventmonitoringdisabled'] = 'Monitoramento LANSE do curso desabilitado';
 $string['eventmonitoringenabled'] = 'Monitoramento LANSE do curso habilitado';
@@ -90,6 +91,7 @@ $string['clitimeout_desc'] = 'Segundos permitidos para a requisição completa a
 // classes/task/mad_logger.php
 $string['send_logs_task_name'] = 'Envio de Logs LANSE';
 $string['check_resend_data_task_name'] = 'Verificação de Reenvio de Dados LANSE';
+$string['task_api_failures'] = '{$a} chamada(s) à API falharam nesta execução. Veja o log da tarefa acima para detalhes; o Moodle tentará novamente com intervalo crescente.';
 
 $string['nopermissiondashboard'] = 'Você não tem permissão para acessar o painel LANSE deste curso.';
 $string['nopermissionmonitoring'] = 'Você não tem permissão para gerenciar o monitoramento LANSE deste curso.';
