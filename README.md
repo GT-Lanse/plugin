@@ -24,8 +24,8 @@ Bloco para Moodle que integra cursos à plataforma **LANSE**, permitindo habilit
 
 ## 📦 Requisitos
 
-- Moodle **4.1 – 4.4** (ajuste conforme sua instalação)
-- PHP **>= 8.0**
+- Moodle **4.1 – 5.3** (compatível com Moodle 4 e Moodle 5)
+- PHP **>= 8.0** (PHP **>= 8.2/8.3** no Moodle 5)
 - Recomenda-se rodar `cron.php` regularmente para execução das tarefas agendadas.
 
 ---
@@ -33,7 +33,7 @@ Bloco para Moodle que integra cursos à plataforma **LANSE**, permitindo habilit
 ## ⚙️ Instalação
 
 1. Baixe ou clone este repositório.
-2. Copie a pasta para: `moodle/blocks/mad2api`
+2. Copie a pasta para `moodle/blocks/mad2api` (Moodle 4.x e 5.0) ou `moodle/public/blocks/mad2api` (Moodle 5.1+).
 3. Acesse **Administração do site → Notificações** para instalar.  
 4. Configure o plugin em **Administração do site → Plugins → Blocos → LANSE Dashboard**.
 

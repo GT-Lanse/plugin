@@ -24,7 +24,8 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once(__DIR__ . '/mad_dashboard.php');
+global $CFG;
+
 require_once($CFG->libdir . '/gradelib.php');
 require_once($CFG->libdir . '/weblib.php');
 

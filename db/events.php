@@ -87,12 +87,6 @@ $observers = array(
     'internal'  => false,
     'priority'  => 1000,
   ),
-  array(
-    'eventname' => '\\core\\event\\course_module_deleted',
-    'callback'  => 'block_mad2api_observer::new_event',
-    'internal'  => false,
-    'priority'  => 1000,
-  ),
 
   array(
     'eventname' => '\core\event\user_graded',
