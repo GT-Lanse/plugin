@@ -51,6 +51,7 @@ class provider implements
             'grades'     => 'privacy:metadata:external:grades',
             'progress'   => 'privacy:metadata:external:progress',
             'lastaccess' => 'privacy:metadata:external:lastaccess',
+            'attendance' => 'privacy:metadata:external:attendance',
         ], 'privacy:metadata:external');
 
         return $items;

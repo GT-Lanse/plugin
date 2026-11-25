@@ -279,6 +279,50 @@ $observers = array(
     'priority'  => 1000,
   ),
 
+  // attendance (mod_attendance, optional)
+  array(
+    'eventname' => '\mod_attendance\event\attendance_taken',
+    'callback'  => 'block_mad2api_observer::new_attendance',
+    'internal'  => false,
+    'priority'  => 1000,
+  ),
+  array(
+    'eventname' => '\mod_attendance\event\attendance_taken_by_student',
+    'callback'  => 'block_mad2api_observer::new_attendance',
+    'internal'  => false,
+    'priority'  => 1000,
+  ),
+  array(
+    'eventname' => '\mod_attendance\event\session_updated',
+    'callback'  => 'block_mad2api_observer::new_attendance',
+    'internal'  => false,
+    'priority'  => 1000,
+  ),
+  array(
+    'eventname' => '\mod_attendance\event\session_deleted',
+    'callback'  => 'block_mad2api_observer::new_attendance',
+    'internal'  => false,
+    'priority'  => 1000,
+  ),
+  array(
+    'eventname' => '\mod_attendance\event\status_added',
+    'callback'  => 'block_mad2api_observer::new_attendance',
+    'internal'  => false,
+    'priority'  => 1000,
+  ),
+  array(
+    'eventname' => '\mod_attendance\event\status_updated',
+    'callback'  => 'block_mad2api_observer::new_attendance',
+    'internal'  => false,
+    'priority'  => 1000,
+  ),
+  array(
+    'eventname' => '\mod_attendance\event\status_removed',
+    'callback'  => 'block_mad2api_observer::new_attendance',
+    'internal'  => false,
+    'priority'  => 1000,
+  ),
+
   // user
   array(
     'eventname' => '\core\event\user_updated',

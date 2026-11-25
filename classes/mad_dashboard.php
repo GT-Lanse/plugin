@@ -919,6 +919,126 @@ class mad_dashboard extends external_api {
     }
 
     /**
+     * Sends the attendance recorded by mod_attendance to the external API.
+     *
+     * @param int $courseid The ID of the course.
+     * @param array|null $userids Only these students are updated; null replaces the whole course.
+     * @return bool True when there was nothing to send or the API accepted it.
+    */
+    public static function api_send_attendance($courseid, array $userids = null) {
+        return self::guard(function () use ($courseid, $userids) {
+            return self::send_attendance_to_api((int)$courseid, $userids);
+        }, 'api_send_attendance for course #' . (int)$courseid, false);
+    }
+
+    /**
+     * Reads the course attendance and sends it to the external API.
+     *
+     * @param int $courseid The ID of the course.
+     * @param array|null $userids Only these students are updated; null replaces the whole course.
+     * @return bool True when there was nothing to send or the API accepted it.
+    */
+    private static function send_attendance_to_api($courseid, array $userids = null) {
+        global $CFG, $DB;
+
+        if (!self::is_course_enabled($courseid) || !$DB->get_manager()->table_exists('attendance')) {
+            return true;
+        }
+
+        // mod_attendance is optional: without its summary class there is nothing to read.
+        $summaryfile = $CFG->dirroot . '/mod/attendance/classes/summary.php';
+
+        if (!file_exists($summaryfile)) {
+            return true;
+        }
+
+        require_once($summaryfile);
+
+        if (!class_exists('mod_attendance_summary')) {
+            return true;
+        }
+
+        $students = self::get_course_attendance($courseid, $userids);
+        $ispartial = $userids !== null;
+
+        if ($ispartial && empty($students)) {
+            return true;
+        }
+
+        $data = [
+            'snapshot' => $ispartial ? 'partial' : 'full',
+            'students' => $students,
+        ];
+
+        $response = self::do_request('PUT', "api/v3/courses/{$courseid}/attendance", $data, $courseid);
+
+        return self::api_response_is_successful($response);
+    }
+
+    /**
+     * Sums, per student, the points of every attendance activity of the course.
+     *
+     * The numbers come from mod_attendance itself, so they match the report the
+     * teacher sees. Students without any taken session are left out.
+     *
+     * @param int $courseid The ID of the course.
+     * @param array|null $userids Restricts the result to these students.
+     * @return array A list of userId, sessionsTaken, points and maxPoints.
+    */
+    private static function get_course_attendance($courseid, array $userids = null) {
+        global $DB;
+
+        $studentrole = (int)get_config('block_mad2api', 'studentrole');
+
+        $studentids = $DB->get_fieldset_sql("
+            SELECT DISTINCT ra.userid
+              FROM {context} ct
+              JOIN {role_assignments} ra ON ra.contextid = ct.id
+             WHERE ct.instanceid = :courseid AND ct.contextlevel = :contextlevel AND ra.roleid = :roleid
+        ", ['courseid' => $courseid, 'contextlevel' => CONTEXT_COURSE, 'roleid' => $studentrole]);
+
+        $studentids = array_map('intval', $studentids);
+
+        if ($userids !== null) {
+            $studentids = array_values(array_intersect($studentids, array_map('intval', $userids)));
+        }
+
+        if (empty($studentids)) {
+            return [];
+        }
+
+        $totals = [];
+        $instances = $DB->get_records('attendance', ['course' => $courseid], 'id', 'id');
+
+        foreach ($instances as $instance) {
+            $summary = new \mod_attendance_summary($instance->id, $studentids);
+
+            foreach ($studentids as $studentid) {
+                if (!$summary->has_taken_sessions($studentid)) {
+                    continue;
+                }
+
+                $usersummary = $summary->get_taken_sessions_summary_for($studentid);
+
+                if (!isset($totals[$studentid])) {
+                    $totals[$studentid] = [
+                        'userId'        => $studentid,
+                        'sessionsTaken' => 0,
+                        'points'        => 0.0,
+                        'maxPoints'     => 0.0,
+                    ];
+                }
+
+                $totals[$studentid]['sessionsTaken'] += (int)$usersummary->numtakensessions;
+                $totals[$studentid]['points'] += (float)$usersummary->takensessionspoints;
+                $totals[$studentid]['maxPoints'] += (float)$usersummary->takensessionsmaxpoints;
+            }
+        }
+
+        return array_values($totals);
+    }
+
+    /**
      * Sends the course logs to the external API in batches.
      * @param int $courseid The ID of the course.
      * @return bool True when the log pipeline finishes successfully.

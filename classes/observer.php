@@ -52,6 +52,24 @@ class block_mad2api_observer {
     }
 
     /**
+     * Sends the attendance after it changes in mod_attendance.
+     *
+     * Self marking only adds a session to one student, so only that student is
+     * updated. Any other change may remove data and replaces the whole course.
+     *
+     * @param \core\event\base $event
+     */
+    public static function new_attendance(\core\event\base $event) {
+        \block_mad2api\mad_dashboard::guard(function () use ($event) {
+            $userids = $event->eventname === '\mod_attendance\event\attendance_taken_by_student'
+                ? [(int)$event->userid]
+                : null;
+
+            \block_mad2api\mad_dashboard::api_send_attendance($event->courseid, $userids);
+        }, 'observer new_attendance ' . $event->eventname);
+    }
+
+    /**
      * Builds and sends the event payload.
      *
      * @param \core\event\base $event

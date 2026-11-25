@@ -15,6 +15,7 @@ Bloco para Moodle que integra cursos à plataforma **LANSE**, permitindo habilit
   - **Boletos** (`block_mad2api\task\mad_bills`)
   - **Logs de curso** (`block_mad2api\task\mad_logger`)
   - **Transferências** (`block_mad2api\task\mad_transfer`)
+  - **Presença** (`block_mad2api\task\mad_send_attendance`), de hora em hora
 - Observa eventos do Moodle (inscrição, conclusão de atividades, notas) e registra em `block_block_mad2api_course_logs`.
 - Suporte a **LTI 1.3** para abertura do dashboard.
 - Implementação da **Privacy API**, com exportação e eliminação de dados pessoais.
@@ -54,6 +55,14 @@ Bloco para Moodle que integra cursos à plataforma **LANSE**, permitindo habilit
 
 ---
 
+## 🗓️ Presença
+
+Quando o curso monitorado usa a atividade **Presença** (`mod_attendance`), o plugin envia à API, por aluno, as sessões registradas, os pontos obtidos e os pontos máximos, somando todas as atividades de presença do curso. O envio ocorre quando a presença é lançada, alterada ou removida, e de hora em hora pela tarefa `mad_send_attendance`. Sem o `mod_attendance` instalado, nada é enviado.
+
+> A versão do backend com a rota `PUT /api/v3/courses/{id}/attendance` precisa ser publicada **antes** desta versão do plugin; caso contrário, a tarefa de presença falhará.
+
+---
+
 ## 🔒 Privacidade
 
 Este plugin armazena e exporta **dados pessoais** para a plataforma **LANSE**.
@@ -69,6 +78,7 @@ Este plugin armazena e exporta **dados pessoais** para a plataforma **LANSE**.
 - Notas  
 - Progresso em atividades  
 - Último acesso  
+- Presença no curso (sessões registradas e pontos)  
 
 O plugin implementa os provedores da **Moodle Privacy API** para exportação e eliminação desses dados.
 

@@ -43,5 +43,15 @@ $tasks = array(
         'day' => '*',
         'month' => '*',
         'dayofweek' => '*',
+    ),
+
+    array(
+        'classname' => 'block_mad2api\task\mad_send_attendance',
+        'blocking' => 0,
+        'minute' => '30',
+        'hour' => '*',
+        'day' => '*',
+        'month' => '*',
+        'dayofweek' => '*',
     )
 );

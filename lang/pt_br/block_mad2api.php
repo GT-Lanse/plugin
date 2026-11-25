@@ -56,6 +56,7 @@ $string['privacy:metadata:external:enrolments'] = 'Informações sobre as inscri
 $string['privacy:metadata:external:grades'] = 'As notas obtidas pelo usuário no curso.';
 $string['privacy:metadata:external:progress'] = 'O progresso de conclusão do usuário no curso.';
 $string['privacy:metadata:external:lastaccess'] = 'A data do último acesso do usuário ao curso.';
+$string['privacy:metadata:external:attendance'] = 'A presença do usuário no curso: sessões registradas e pontos.';
 
 // view.php
 $string['api_contact_error'] = 'Falha ao contatar a API (erro Moodle).';
@@ -91,6 +92,7 @@ $string['clitimeout_desc'] = 'Segundos permitidos para a requisição completa a
 // classes/task/mad_logger.php
 $string['send_logs_task_name'] = 'Envio de Logs LANSE';
 $string['check_resend_data_task_name'] = 'Verificação de Reenvio de Dados LANSE';
+$string['send_attendance_task_name'] = 'Envio de Presença LANSE';
 $string['task_api_failures'] = '{$a} chamada(s) à API falharam nesta execução. Veja o log da tarefa acima para detalhes; o Moodle tentará novamente com intervalo crescente.';
 
 $string['nopermissiondashboard'] = 'Você não tem permissão para acessar o painel LANSE deste curso.';

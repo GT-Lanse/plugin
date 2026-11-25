@@ -60,6 +60,7 @@ $string['privacy:metadata:external:enrolments'] = 'Information regarding the use
 $string['privacy:metadata:external:grades'] = 'The grades obtained by the user in the course.';
 $string['privacy:metadata:external:progress'] = 'The completion progress of the user within the course.';
 $string['privacy:metadata:external:lastaccess'] = 'The timestamp of the user\'s last access to the course.';
+$string['privacy:metadata:external:attendance'] = 'Attendance of the user in the course: sessions taken and points.';
 
 // view.php
 $string['api_contact_error'] = 'Failed to contact the API (Moodle error).';
@@ -95,6 +96,7 @@ $string['clitimeout_desc'] = 'Seconds allowed for a whole request from scheduled
 // classes/task/
 $string['send_logs_task_name'] = 'LANSE log delivery';
 $string['check_resend_data_task_name'] = 'LANSE resend data check';
+$string['send_attendance_task_name'] = 'LANSE attendance delivery';
 $string['task_api_failures'] = '{$a} API call(s) failed during this run. See the task log above for details; Moodle will retry the task with an increasing delay.';
 
 $string['dashboardnotenabled'] = 'Course monitoring is disabled for this course.';
