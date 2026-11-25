@@ -6,6 +6,9 @@ module.exports = function(grunt) {
   grunt.initConfig({
     pkg: grunt.file.readJSON('package.json'),
     uglify: {
+      options: {
+        sourceMap: true
+      },
       build: {
         src: 'amd/src/enable_button_api_call.js',
         dest: 'amd/build/enable_button_api_call.min.js'

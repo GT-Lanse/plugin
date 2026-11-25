@@ -28,16 +28,33 @@ defined('MOODLE_INTERNAL') || die();
 
 global $CFG;
 
-require_once($CFG->libdir . '/externallib.php');
 require_once($CFG->libdir . '/gradelib.php');
 require_once($CFG->libdir . '/weblib.php');
 
-use external_api;
-use external_function_parameters;
-use external_multiple_structure;
-use external_single_structure;
-use external_value;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_multiple_structure;
+use core_external\external_single_structure;
+use core_external\external_value;
 
+// Moodle 4.2+ autoloads \core_external\* (and Moodle 5.3 deprecates the
+// legacy global \external_* aliases). Keep a compatibility shim for Moodle
+// 4.0/4.1 where only lib/externallib.php exists.
+if (!class_exists(external_api::class)) {
+    require_once($CFG->libdir . '/externallib.php');
+
+    foreach ([
+        'external_api',
+        'external_function_parameters',
+        'external_multiple_structure',
+        'external_single_structure',
+        'external_value',
+    ] as $externalclass) {
+        if (!class_exists("core_external\\{$externalclass}", false) && class_exists("\\{$externalclass}", false)) {
+            class_alias("\\{$externalclass}", "core_external\\{$externalclass}");
+        }
+    }
+}
 /**
  * MAD Dashboard external API.
  */
@@ -509,10 +526,15 @@ class mad_dashboard extends external_api {
 
             $tablename = strtolower($activity->type);
 
+            if (!$DB->get_manager()->table_exists($tablename)) {
+                self::trace("Table {{$tablename}} does not exist for activity #{$activity->contextInstanceId} \n");
+
+                continue;
+            }
+
             self::trace("Searching on table {{$tablename}} for activity #{$coursemodule->instance} \n");
 
             $instance = $DB->get_record($tablename, ['id' => (int)$coursemodule->instance]);
-
             if (empty($instance)) {
                 self::trace("Instance not found for activity #{$activity->contextInstanceId} \n");
 
@@ -1320,8 +1342,13 @@ class mad_dashboard extends external_api {
                 $tablename = $coursemodule->moduletype;
                 $instanceid = (int)$coursemodule->instance;
 
-                $instance = $DB->get_record($tablename, ['id' => $instanceid]);
+                if (!$DB->get_manager()->table_exists($tablename)) {
+                    self::trace("Table {{$tablename}} does not exist for activity #{$coursemodule->coursemoduleid}\n");
 
+                    continue;
+                }
+
+                $instance = $DB->get_record($tablename, ['id' => $instanceid]);
                 if (empty($instance) || !isset($instance->name)) {
                     self::trace("Instance not found for table {$tablename} with ID {$instanceid}\n");
 
@@ -1437,9 +1464,13 @@ class mad_dashboard extends external_api {
             return null;
         }
 
-        $field  = $duedatefields[$modname];
-        $record = $DB->get_record($modname, ['id' => $instanceid], $field);
+        $field = $duedatefields[$modname];
 
+        if (!$DB->get_manager()->table_exists($modname)) {
+            return null;
+        }
+
+        $record = $DB->get_record($modname, ['id' => $instanceid], $field);
         return $record->$field ?? null;
     }
 
@@ -1548,7 +1579,7 @@ class mad_dashboard extends external_api {
         $sql = "
             SELECT u.id AS user_id, u.email,
                    u.firstname AS first_name, u.lastname AS last_name,
-                   (CASE WHEN u.lastaccess = '0' THEN 'false' ELSE 'true' END) AS logged_in,
+                   (CASE WHEN u.lastaccess = 0 THEN 'false' ELSE 'true' END) AS logged_in,
                    AVG(g.rawgrade) AS current_grade,
                    u.phone1, u.phone2
               FROM {course} c
@@ -1560,7 +1591,7 @@ class mad_dashboard extends external_api {
                     SELECT gi.id FROM {grade_items} gi WHERE gi.courseid = :courseid_gi
               )
              WHERE c.id = :courseid AND r.id = :roleid
-          GROUP BY u.id
+          GROUP BY u.id, u.email, u.firstname, u.lastname, u.lastaccess, u.phone1, u.phone2
         ";
 
         $params = [
@@ -1592,7 +1623,7 @@ class mad_dashboard extends external_api {
         $sql = "
             SELECT u.id AS user_id, u.email,
                    u.firstname AS first_name, u.lastname AS last_name,
-                   (CASE WHEN u.lastaccess = '0' THEN 'false' ELSE 'true' END) AS logged_in,
+                   (CASE WHEN u.lastaccess = 0 THEN 'false' ELSE 'true' END) AS logged_in,
                    AVG(g.rawgrade) AS current_grade
               FROM {course} c
               JOIN {context} ct ON c.id = ct.instanceid AND ct.contextlevel = :contextlevel
@@ -1603,6 +1634,7 @@ class mad_dashboard extends external_api {
                     SELECT gi.id FROM {grade_items} gi WHERE gi.courseid = :courseid_gi
               )
              WHERE c.id = :courseid AND r.id = :roleid AND u.id = :userid
+          GROUP BY u.id, u.email, u.firstname, u.lastname, u.lastaccess
         ";
 
         $params = [
@@ -1634,17 +1666,23 @@ class mad_dashboard extends external_api {
 
         $coordinatorrolescfg = (string)get_config('block_mad2api', 'adminroles');
         $coordinatorroles = self::parse_role_ids_list($coordinatorrolescfg);
-        list($insql, $inparams) = $DB->get_in_or_equal($coordinatorroles, SQL_PARAMS_NAMED, 'cr');
+        if (!empty($coordinatorroles)) {
+            list($insql, $inparams) = $DB->get_in_or_equal($coordinatorroles, SQL_PARAMS_NAMED, 'cr');
+            $coordinatorcase = "WHEN r.id {$insql} THEN 'coordinator'";
+        } else {
+            $inparams = [];
+            $coordinatorcase = '';
+        }
 
         $sql = "
             SELECT u.id AS user_id, u.email,
                    u.firstname AS first_name, u.lastname AS last_name,
-                   (CASE WHEN u.lastaccess = '0' THEN 'false' ELSE 'true' END) AS logged_in,
+                   (CASE WHEN u.lastaccess = 0 THEN 'false' ELSE 'true' END) AS logged_in,
                    AVG(g.rawgrade) AS current_grade, u.phone1, u.phone2,
                    r.shortname AS moodle_role,
                    (CASE
                         WHEN r.id = :studentrole THEN 'student'
-                        WHEN r.id {$insql} THEN 'coordinator'
+                        {$coordinatorcase}
                         ELSE 'teacher'
                     END) AS role
               FROM {course} c
@@ -1656,6 +1694,7 @@ class mad_dashboard extends external_api {
                     SELECT gi.id FROM {grade_items} gi WHERE gi.courseid = :courseid_gi
               )
              WHERE c.id = :courseid AND u.id = :userid
+          GROUP BY u.id, u.email, u.firstname, u.lastname, u.lastaccess, u.phone1, u.phone2, r.id, r.shortname
         ";
 
         $params = array_merge([
@@ -1902,7 +1941,7 @@ class mad_dashboard extends external_api {
 
             return self::request_error($e->getMessage(), 0);
         } finally {
-            if (!empty($curlhandle)) {
+            if (!empty($curlhandle) && PHP_VERSION_ID < 80000) {
                 curl_close($curlhandle);
             }
         }

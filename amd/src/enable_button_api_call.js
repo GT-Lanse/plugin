@@ -1,41 +1,30 @@
-define(['jquery', 'core/ajax', 'core/notification', 'core/str', 'core/modal_factory'],
-function ($, ajax, notification, str, ModalFactory) {
+define(['jquery', 'core/ajax', 'core/notification', 'core/str'],
+function ($, ajax, notification, str) {
 
   return {
     init: (courseid, version) => {
 
       function confirmAction(titleKey, bodyKey, onConfirm) {
-
         str.get_strings([
           { key: titleKey, component: 'block_mad2api' },
           { key: bodyKey, component: 'block_mad2api' },
           { key: 'confirm', component: 'block_mad2api' },
           { key: 'cancel', component: 'block_mad2api' }
         ]).done(function (strs) {
-
-          ModalFactory.create({
-            title: strs[0],
-            body: strs[1],
-            type: ModalFactory.types.SAVE_CANCEL
-          }).then(modal => {
-
-            // ✅ textos dos botões via strings
-            modal.setButtonText('save', strs[2]);
-            modal.setButtonText('cancel', strs[3]);
-
-            // ✅ evento confiável
-            modal.getRoot().on('click', '[data-action="save"]', function () {
-              onConfirm();
-              modal.hide();
-            });
-
-            modal.getRoot().on('click', '[data-action="cancel"]', function () {
-              modal.hide();
-            });
-
-            modal.show();
-          });
-
+          // core/notification.saveCancel works across Moodle 4.x and 5.x
+          // (core/modal_factory was deprecated in 4.3 and removed in 5.2).
+          notification.saveCancel(
+            strs[0],
+            strs[1],
+            strs[2],
+            () => onConfirm(),
+            () => {}
+          ).then(modal => {
+            if (modal && typeof modal.setButtonText === 'function') {
+              modal.setButtonText('cancel', strs[3]);
+            }
+            return modal;
+          }).catch(notification.exception);
         }).fail(notification.exception);
       }
 
@@ -49,8 +38,7 @@ function ($, ajax, notification, str, ModalFactory) {
         }
 
         str.get_string('request_error_title', 'block_mad2api')
-          .then(title => ModalFactory.create({ title, body: ex.message }))
-          .then(modal => modal.show())
+          .then(title => notification.alert(title, ex.message))
           .catch(notification.exception);
       }
 
@@ -87,14 +75,11 @@ function ($, ajax, notification, str, ModalFactory) {
               { key: 'error_alert_body', component: 'block_mad2api' }
             ]).done(function (strs) {
               if (version > 2016120500) {
-                ModalFactory.create({
-                  title: strs[0],
-                  body: strs[1]
-                }).then(modal => modal.show());
+                notification.alert(strs[0], strs[1]).catch(notification.exception);
               } else {
                 alert(strs[2]);
               }
-            });
+            }).fail(notification.exception);
             return;
           }
 
